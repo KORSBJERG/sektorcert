@@ -10,6 +10,7 @@ import NewAssessment from "./pages/NewAssessment";
 import AssessmentWizard from "./pages/AssessmentWizard";
 import AssessmentReport from "./pages/AssessmentReport";
 import Analytics from "./pages/Analytics";
+import AuditLogs from "./pages/AuditLogs";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -77,6 +78,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute>
+                <AuditLogs />
               </ProtectedRoute>
             }
           />
