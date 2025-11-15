@@ -361,11 +361,14 @@ const AssessmentWizard = () => {
                 </Button>
                 {currentStep === assessmentItems.length - 1 ? (
                   <Button
-                    type="submit"
+                    type="button"
+                    disabled={updateItemMutation.isPending || completeAssessmentMutation.isPending}
                     className="flex-1 gap-2 bg-success hover:bg-success/90"
                     onClick={() => {
                       const form = document.querySelector("form") as HTMLFormElement;
                       const formData = new FormData(form);
+                      
+                      // First update the current item
                       updateItemMutation.mutate(
                         {
                           itemId: currentItem.id,
@@ -378,19 +381,34 @@ const AssessmentWizard = () => {
                         },
                         {
                           onSuccess: () => {
+                            // Then complete the assessment
                             completeAssessmentMutation.mutate();
                           },
                         }
                       );
                     }}
                   >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Afslut vurdering
+                    {updateItemMutation.isPending || completeAssessmentMutation.isPending ? (
+                      <>Afslutter...</>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Afslut vurdering
+                      </>
+                    )}
                   </Button>
                 ) : (
-                  <Button type="submit" className="flex-1 gap-2 bg-gradient-primary hover:opacity-90">
-                    Gem og fortsæt
-                    <ArrowRight className="h-4 w-4" />
+                  <Button 
+                    type="submit" 
+                    disabled={updateItemMutation.isPending}
+                    className="flex-1 gap-2 bg-gradient-primary hover:opacity-90"
+                  >
+                    {updateItemMutation.isPending ? "Gemmer..." : (
+                      <>
+                        Gem og fortsæt
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
