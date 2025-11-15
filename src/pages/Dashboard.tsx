@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Shield, FileText, Users, LogOut, BarChart3 } from "lucide-react";
+import { Plus, Shield, FileText, Users, LogOut, BarChart3, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -59,6 +59,12 @@ const Dashboard = () => {
                 <Button variant="outline" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Analytics
+                </Button>
+              </Link>
+              <Link to="/audit-logs">
+                <Button variant="outline" className="gap-2">
+                  <ScrollText className="h-4 w-4" />
+                  Audit Log
                 </Button>
               </Link>
               <Link to="/customers/new">
