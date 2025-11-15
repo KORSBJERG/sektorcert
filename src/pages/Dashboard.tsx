@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Shield, FileText, Users, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Plus, Shield, FileText, Users, LogOut, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -56,6 +55,12 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Link to="/analytics">
+                <Button variant="outline" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </Button>
+              </Link>
               <Link to="/customers/new">
                 <Button className="gap-2 bg-gradient-primary hover:opacity-90">
                   <Plus className="h-4 w-4" />
