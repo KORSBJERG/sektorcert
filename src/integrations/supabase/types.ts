@@ -105,6 +105,7 @@ export type Database = {
           assessment_date: string
           consultant_name: string
           created_at: string
+          created_by_user_id: string | null
           customer_id: string
           id: string
           overall_maturity_score: number | null
@@ -115,6 +116,7 @@ export type Database = {
           assessment_date?: string
           consultant_name: string
           created_at?: string
+          created_by_user_id?: string | null
           customer_id: string
           id?: string
           overall_maturity_score?: number | null
@@ -125,6 +127,7 @@ export type Database = {
           assessment_date?: string
           consultant_name?: string
           created_at?: string
+          created_by_user_id?: string | null
           customer_id?: string
           id?: string
           overall_maturity_score?: number | null
@@ -148,6 +151,7 @@ export type Database = {
           contact_person: string | null
           contact_phone: string | null
           created_at: string
+          created_by_user_id: string | null
           id: string
           name: string
           operation_type: string
@@ -159,6 +163,7 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           id?: string
           name: string
           operation_type: string
@@ -170,6 +175,7 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           id?: string
           name?: string
           operation_type?: string

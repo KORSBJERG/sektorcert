@@ -9,6 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { customerSchema } from "@/lib/validations";
+import { z } from "zod";
 
 const NewCustomer = () => {
   const navigate = useNavigate();
@@ -27,9 +29,12 @@ const NewCustomer = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validatedData = customerSchema.parse(formData);
+
       const { data, error } = await supabase
         .from("customers")
-        .insert([formData])
+        .insert([validatedData])
         .select()
         .single();
 
@@ -37,9 +42,13 @@ const NewCustomer = () => {
 
       toast.success("Kunde oprettet!");
       navigate(`/customers/${data.id}`);
-    } catch (error) {
-      console.error("Error creating customer:", error);
-      toast.error("Kunne ikke oprette kunde");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        console.error("Error creating customer:", error);
+        toast.error("Kunne ikke oprette kunde");
+      }
     } finally {
       setLoading(false);
     }
