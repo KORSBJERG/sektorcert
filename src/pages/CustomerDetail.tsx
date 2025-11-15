@@ -128,12 +128,22 @@ const CustomerDetail = () => {
                       <p className="text-xs text-muted-foreground">Status: {assessment.status}</p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => navigate(`/assessments/${assessment.id}`)}
-                    variant="outline"
-                  >
-                    Se vurdering
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => navigate(`/assessments/${assessment.id}`)}
+                      variant="outline"
+                    >
+                      {assessment.status === "completed" ? "Se rapport" : "Fortsæt vurdering"}
+                    </Button>
+                    {assessment.status === "completed" && (
+                      <Button
+                        onClick={() => navigate(`/assessments/${assessment.id}/report`)}
+                        variant="outline"
+                      >
+                        PDF Rapport
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
