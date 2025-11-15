@@ -33,6 +33,12 @@ interface AssessmentItem {
   };
 }
 
+// UUID validation function
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,6 +46,25 @@ serve(async (req) => {
 
   try {
     const { assessmentId } = await req.json();
+
+    // Validate input
+    if (!assessmentId || typeof assessmentId !== 'string') {
+      console.error('Invalid assessmentId provided:', assessmentId);
+      return new Response(
+        JSON.stringify({ error: 'Assessment ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isValidUUID(assessmentId)) {
+      console.error('Invalid UUID format:', assessmentId);
+      return new Response(
+        JSON.stringify({ error: 'Invalid assessment ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Generating PDF for assessment:', assessmentId);
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",

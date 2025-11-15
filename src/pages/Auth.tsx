@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
+import { authSchema } from "@/lib/validations";
+import { z } from "zod";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,10 +22,13 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validatedData = authSchema.parse({ email, password });
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: validatedData.email,
+          password: validatedData.password,
           options: {
             emailRedirectTo: `${window.location.origin}/`
           }
@@ -33,15 +38,19 @@ const Auth = () => {
         setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validatedData.email,
+          password: validatedData.password,
         });
         if (error) throw error;
         toast.success("Logget ind!");
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error.message || "Der opstod en fejl");
+      if (error instanceof z.ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        toast.error(error.message || "Der opstod en fejl");
+      }
     } finally {
       setLoading(false);
     }

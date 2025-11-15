@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { assessmentSchema } from "@/lib/validations";
+import { z } from "zod";
 
 const NewAssessment = () => {
   const navigate = useNavigate();
@@ -46,14 +48,21 @@ const NewAssessment = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validatedData = assessmentSchema.parse({
+        customer_id: formData.customer_id,
+        consultant_name: formData.consultant_name,
+        assessment_date: formData.assessment_date,
+      });
+
       // Create assessment
       const { data: assessment, error: assessmentError } = await supabase
         .from("assessments")
         .insert([
           {
-            customer_id: formData.customer_id,
-            consultant_name: formData.consultant_name,
-            assessment_date: formData.assessment_date,
+            customer_id: validatedData.customer_id,
+            consultant_name: validatedData.consultant_name,
+            assessment_date: validatedData.assessment_date,
             status: "in_progress",
           },
         ])
@@ -62,20 +71,20 @@ const NewAssessment = () => {
 
       if (assessmentError) throw assessmentError;
 
-      // Get all recommendations
+      const newAssessmentId = assessment.id;
+
+      // Fetch all recommendations
       const { data: recommendations, error: recsError } = await supabase
         .from("recommendations")
-        .select("id")
-        .order("number");
+        .select("id");
 
       if (recsError) throw recsError;
 
-      // Create assessment items for all recommendations
+      // Create assessment items for each recommendation
       const assessmentItems = recommendations.map((rec) => ({
-        assessment_id: assessment.id,
+        assessment_id: newAssessmentId,
         recommendation_id: rec.id,
-        maturity_level: 0,
-        status: "not_fulfilled",
+        status: "not_started",
       }));
 
       const { error: itemsError } = await supabase
@@ -84,11 +93,14 @@ const NewAssessment = () => {
 
       if (itemsError) throw itemsError;
 
-      toast.success("Vurdering oprettet!");
-      navigate(`/assessments/${assessment.id}`);
-    } catch (error) {
-      console.error("Error creating assessment:", error);
-      toast.error("Kunne ikke oprette vurdering");
+      toast.success("Vurdering oprettet succesfuldt!");
+      navigate(`/assessment/${newAssessmentId}`);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        toast.error(error.message || "Der opstod en fejl");
+      }
     } finally {
       setLoading(false);
     }
