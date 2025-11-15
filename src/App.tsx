@@ -8,6 +8,7 @@ import NewCustomer from "./pages/NewCustomer";
 import CustomerDetail from "./pages/CustomerDetail";
 import NewAssessment from "./pages/NewAssessment";
 import AssessmentWizard from "./pages/AssessmentWizard";
+import AssessmentReport from "./pages/AssessmentReport";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -59,6 +60,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AssessmentWizard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assessments/:id/report"
+            element={
+              <ProtectedRoute>
+                <AssessmentReport />
               </ProtectedRoute>
             }
           />
