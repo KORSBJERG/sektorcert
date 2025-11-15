@@ -63,12 +63,14 @@ const CustomerDetail = () => {
       <header className="border-b border-border bg-card shadow-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Tilbage
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/">
+                <Button variant="ghost" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+            </div>
             <Button
               onClick={() => navigate(`/assessments/new?customer=${id}`)}
               className="gap-2 bg-gradient-primary hover:opacity-90"
