@@ -84,7 +84,7 @@ const NewAssessment = () => {
       const assessmentItems = recommendations.map((rec) => ({
         assessment_id: newAssessmentId,
         recommendation_id: rec.id,
-        status: "not_started",
+        status: "not_fulfilled",
       }));
 
       const { error: itemsError } = await supabase
