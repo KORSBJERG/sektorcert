@@ -1,19 +1,54 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Shield, FileText, Users, LogOut, BarChart3, ScrollText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Shield, FileText, Users, LogOut, BarChart3, ScrollText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { da } from "date-fns/locale";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logget ud");
     navigate("/auth");
+  };
+
+  const handleDeleteAssessment = async () => {
+    if (!assessmentToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("assessments")
+        .delete()
+        .eq("id", assessmentToDelete);
+
+      if (error) throw error;
+
+      toast.success("Vurdering slettet");
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
+    } catch (error) {
+      toast.error("Der opstod en fejl ved sletning af vurderingen");
+    }
   };
 
   const { data: customers, isLoading: loadingCustomers } = useQuery({
@@ -121,39 +156,100 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <Card className="p-6 shadow-elevated">
-          <h2 className="mb-4 text-xl font-semibold text-foreground">Seneste Kunder</h2>
-          {loadingCustomers ? (
-            <div className="py-8 text-center text-muted-foreground">Indlæser...</div>
-          ) : customers && customers.length > 0 ? (
-            <div className="space-y-3">
-              {customers.map((customer) => (
-                <div
-                  key={customer.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
-                >
-                  <div>
-                    <h3 className="font-semibold text-foreground">{customer.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {customer.operation_type} • {customer.contact_person}
-                    </p>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="p-6 shadow-elevated">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">Seneste Kunder</h2>
+            {loadingCustomers ? (
+              <div className="py-8 text-center text-muted-foreground">Indlæser...</div>
+            ) : customers && customers.length > 0 ? (
+              <div className="space-y-3">
+                {customers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
+                  >
+                    <div>
+                      <h3 className="font-semibold text-foreground">{customer.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {customer.operation_type} • {customer.contact_person}
+                      </p>
+                    </div>
+                    <Link to={`/customers/${customer.id}`}>
+                      <Button variant="outline">Se detaljer</Button>
+                    </Link>
                   </div>
-                  <Link to={`/customers/${customer.id}`}>
-                    <Button variant="outline">Se detaljer</Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="mb-4 text-muted-foreground">Ingen kunder endnu</p>
-              <Link to="/customers/new">
-                <Button className="bg-gradient-primary hover:opacity-90">Opret første kunde</Button>
-              </Link>
-            </div>
-          )}
-        </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="mb-4 text-muted-foreground">Ingen kunder endnu</p>
+                <Link to="/customers/new">
+                  <Button className="bg-gradient-primary hover:opacity-90">Opret første kunde</Button>
+                </Link>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6 shadow-elevated">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">Seneste Vurderinger</h2>
+            {assessments && assessments.length > 0 ? (
+              <div className="space-y-3">
+                {assessments.map((assessment) => (
+                  <div
+                    key={assessment.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
+                  >
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground">
+                        {assessment.customers?.name || "Ukendt kunde"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(assessment.assessment_date), "d. MMMM yyyy", { locale: da })} • {assessment.consultant_name}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link to={`/assessment/${assessment.id}/report`}>
+                        <Button variant="outline" size="sm">Se detaljer</Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setAssessmentToDelete(assessment.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="mb-4 text-muted-foreground">Ingen vurderinger endnu</p>
+              </div>
+            )}
+          </Card>
+        </div>
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bekræft sletning</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er du sikker på, at du vil slette denne vurdering? Denne handling kan ikke fortrydes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAssessment} className="bg-destructive hover:bg-destructive/90">
+              Slet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
