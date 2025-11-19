@@ -24,6 +24,8 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+  const [customerDeleteDialogOpen, setCustomerDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -48,6 +50,27 @@ const Dashboard = () => {
       setAssessmentToDelete(null);
     } catch (error) {
       toast.error("Der opstod en fejl ved sletning af vurderingen");
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", customerToDelete);
+
+      if (error) throw error;
+
+      toast.success("Kunde slettet");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
+      setCustomerDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    } catch (error) {
+      toast.error("Der opstod en fejl ved sletning af kunden");
     }
   };
 
@@ -168,15 +191,27 @@ const Dashboard = () => {
                     key={customer.id}
                     className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
                   >
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{customer.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {customer.operation_type} • {customer.contact_person}
                       </p>
                     </div>
-                    <Link to={`/customers/${customer.id}`}>
-                      <Button variant="outline">Se detaljer</Button>
-                    </Link>
+                    <div className="flex gap-2">
+                      <Link to={`/customers/${customer.id}`}>
+                        <Button variant="outline" size="sm">Se detaljer</Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCustomerToDelete(customer.id);
+                          setCustomerDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -237,7 +272,7 @@ const Dashboard = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bekræft sletning</AlertDialogTitle>
+            <AlertDialogTitle>Bekræft sletning af vurdering</AlertDialogTitle>
             <AlertDialogDescription>
               Er du sikker på, at du vil slette denne vurdering? Denne handling kan ikke fortrydes.
             </AlertDialogDescription>
@@ -246,6 +281,23 @@ const Dashboard = () => {
             <AlertDialogCancel>Annuller</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAssessment} className="bg-destructive hover:bg-destructive/90">
               Slet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={customerDeleteDialogOpen} onOpenChange={setCustomerDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bekræft sletning af kunde</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er du sikker på, at du vil slette denne kunde? Dette vil også slette alle tilknyttede vurderinger. Denne handling kan ikke fortrydes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive hover:bg-destructive/90">
+              Slet kunde
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
