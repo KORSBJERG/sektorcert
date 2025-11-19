@@ -1,15 +1,33 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Plus, FileText } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Plus, FileText, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ["customer", id],
@@ -36,6 +54,78 @@ const CustomerDetail = () => {
       return data;
     },
   });
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && assessments) {
+      setSelectedAssessments(assessments.map((a) => a.id));
+    } else {
+      setSelectedAssessments([]);
+    }
+  };
+
+  const handleSelectAssessment = (assessmentId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedAssessments([...selectedAssessments, assessmentId]);
+    } else {
+      setSelectedAssessments(selectedAssessments.filter((id) => id !== assessmentId));
+    }
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!assessmentToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("assessments")
+        .delete()
+        .eq("id", assessmentToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: "Vurdering slettet",
+        description: "Vurderingen er blevet slettet.",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["customer-assessments", id] });
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
+    } catch (error) {
+      toast({
+        title: "Fejl",
+        description: "Der opstod en fejl ved sletning af vurderingen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAssessments.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("assessments")
+        .delete()
+        .in("id", selectedAssessments);
+
+      if (error) throw error;
+
+      toast({
+        title: "Vurderinger slettet",
+        description: `${selectedAssessments.length} vurdering(er) er blevet slettet.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["customer-assessments", id] });
+      setSelectedAssessments([]);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Fejl",
+        description: "Der opstod en fejl ved sletning af vurderingerne.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -106,49 +196,86 @@ const CustomerDetail = () => {
         </Card>
 
         <Card className="p-6 shadow-elevated">
-          <h2 className="mb-4 text-xl font-semibold text-foreground">Sikkerhedsvurderinger</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">Sikkerhedsvurderinger</h2>
+            {selectedAssessments.length > 0 && (
+              <Button
+                onClick={() => setDeleteDialogOpen(true)}
+                variant="destructive"
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Slet valgte ({selectedAssessments.length})
+              </Button>
+            )}
+          </div>
           {assessments && assessments.length > 0 ? (
-            <div className="space-y-3">
-              {assessments.map((assessment) => (
-                <div
-                  key={assessment.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
-                >
-                  <div className="flex items-center gap-4">
+            <>
+              <div className="mb-3 flex items-center gap-2 border-b border-border pb-2">
+                <Checkbox
+                  checked={selectedAssessments.length === assessments.length}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">Vælg alle</span>
+              </div>
+              <div className="space-y-3">
+                {assessments.map((assessment) => (
+                  <div
+                    key={assessment.id}
+                    className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-accent"
+                  >
+                    <Checkbox
+                      checked={selectedAssessments.includes(assessment.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectAssessment(assessment.id, checked as boolean)
+                      }
+                    />
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-foreground">
-                        {format(new Date(assessment.assessment_date), "d. MMMM yyyy", {
-                          locale: da,
-                        })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Konsulent: {assessment.consultant_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Status: {assessment.status}</p>
+                    <div className="flex flex-1 items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {format(new Date(assessment.assessment_date), "d. MMMM yyyy", {
+                            locale: da,
+                          })}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Konsulent: {assessment.consultant_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Status: {assessment.status}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => navigate(`/assessments/${assessment.id}`)}
+                          variant="outline"
+                        >
+                          {assessment.status === "completed" ? "Se rapport" : "Fortsæt vurdering"}
+                        </Button>
+                        {assessment.status === "completed" && (
+                          <Button
+                            onClick={() => navigate(`/assessments/${assessment.id}/report`)}
+                            variant="outline"
+                          >
+                            PDF Rapport
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => {
+                            setAssessmentToDelete(assessment.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                          variant="ghost"
+                          size="icon"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => navigate(`/assessments/${assessment.id}`)}
-                      variant="outline"
-                    >
-                      {assessment.status === "completed" ? "Se rapport" : "Fortsæt vurdering"}
-                    </Button>
-                    {assessment.status === "completed" && (
-                      <Button
-                        onClick={() => navigate(`/assessments/${assessment.id}/report`)}
-                        variant="outline"
-                      >
-                        PDF Rapport
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="py-8 text-center">
               <p className="mb-4 text-muted-foreground">Ingen vurderinger endnu</p>
@@ -161,6 +288,34 @@ const CustomerDetail = () => {
             </div>
           )}
         </Card>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {assessmentToDelete
+                  ? "Denne handling kan ikke fortrydes. Vurderingen vil blive permanent slettet."
+                  : `Denne handling kan ikke fortrydes. ${selectedAssessments.length} vurdering(er) vil blive permanent slettet.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setAssessmentToDelete(null);
+                }}
+              >
+                Annuller
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={assessmentToDelete ? handleDeleteSingle : handleBulkDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Slet
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
