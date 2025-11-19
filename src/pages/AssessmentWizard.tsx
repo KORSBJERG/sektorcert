@@ -39,6 +39,41 @@ const AssessmentWizard = () => {
         .eq("assessment_id", id)
         .order("recommendations(number)");
       if (error) throw error;
+      
+      // If no items exist, create them automatically
+      if (!data || data.length === 0) {
+        const { data: recommendations, error: recError } = await supabase
+          .from("recommendations")
+          .select("id")
+          .order("number");
+        
+        if (recError) throw recError;
+        
+        if (recommendations && recommendations.length > 0) {
+          const assessmentItems = recommendations.map((rec) => ({
+            assessment_id: id,
+            recommendation_id: rec.id,
+            status: "not_fulfilled",
+          }));
+
+          const { error: itemsError } = await supabase
+            .from("assessment_items")
+            .insert(assessmentItems);
+
+          if (itemsError) throw itemsError;
+          
+          // Fetch the newly created items
+          const { data: newData, error: newError } = await supabase
+            .from("assessment_items")
+            .select("*, recommendations(*)")
+            .eq("assessment_id", id)
+            .order("recommendations(number)");
+          
+          if (newError) throw newError;
+          return newData;
+        }
+      }
+      
       return data;
     },
   });
@@ -101,7 +136,7 @@ const AssessmentWizard = () => {
     );
   }
 
-  if (!assessment || !assessmentItems || assessmentItems.length === 0) {
+  if (!assessment) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
         <Card className="p-8">
@@ -110,6 +145,14 @@ const AssessmentWizard = () => {
             <Button>Tilbage til oversigt</Button>
           </Link>
         </Card>
+      </div>
+    );
+  }
+  
+  if (!assessmentItems || assessmentItems.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
+        <p className="text-muted-foreground">Indlæser vurderingspunkter...</p>
       </div>
     );
   }
