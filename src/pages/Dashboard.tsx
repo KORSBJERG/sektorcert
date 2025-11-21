@@ -108,7 +108,7 @@ const Dashboard = () => {
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">SektorCERT</h1>
+                <h1 className="text-2xl font-bold text-foreground">Peaknet</h1>
                 <p className="text-sm text-muted-foreground">Cybersikkerhed Assessment</p>
               </div>
             </div>
