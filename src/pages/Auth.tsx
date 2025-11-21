@@ -63,7 +63,7 @@ const Auth = () => {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary">
             <Shield className="h-8 w-8 text-white" />
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-foreground">SektorCERT</h1>
+          <h1 className="mb-2 text-2xl font-bold text-foreground">Peaknet</h1>
           <p className="text-sm text-muted-foreground">
             {isSignUp ? "Opret konto" : "Log ind på dit system"}
           </p>
