@@ -283,6 +283,7 @@ const AssessmentWizard = () => {
             <h3 className="mb-4 text-xl font-semibold text-foreground">Vurdering</h3>
 
             <form
+              key={currentItem.id}
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
