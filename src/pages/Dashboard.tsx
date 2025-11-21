@@ -181,7 +181,12 @@ const Dashboard = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="p-6 shadow-elevated">
-            <h2 className="mb-4 text-xl font-semibold text-foreground">Seneste Kunder</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Seneste Kunder</h2>
+              <Link to="/customers">
+                <Button variant="outline" size="sm">Se alle</Button>
+              </Link>
+            </div>
             {loadingCustomers ? (
               <div className="py-8 text-center text-muted-foreground">Indlæser...</div>
             ) : customers && customers.length > 0 ? (
