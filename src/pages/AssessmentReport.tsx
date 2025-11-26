@@ -1,9 +1,9 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
@@ -11,7 +11,9 @@ import { useState } from "react";
 
 const AssessmentReport = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [generating, setGenerating] = useState(false);
+  const [creatingVersion, setCreatingVersion] = useState(false);
 
   const { data: assessment, isLoading } = useQuery({
     queryKey: ["assessment", id],
@@ -38,6 +40,53 @@ const AssessmentReport = () => {
       return data;
     },
   });
+
+  const handleCreateNewVersion = async () => {
+    if (!assessment || !assessmentItems) return;
+    
+    setCreatingVersion(true);
+    try {
+      // Create new assessment with incremented version
+      const { data: newAssessment, error: assessmentError } = await supabase
+        .from("assessments")
+        .insert({
+          customer_id: assessment.customer_id,
+          consultant_name: assessment.consultant_name,
+          assessment_date: new Date().toISOString().split('T')[0],
+          status: 'in_progress',
+          version: (assessment.version || 1) + 1,
+          parent_assessment_id: assessment.parent_assessment_id || assessment.id,
+        })
+        .select()
+        .single();
+
+      if (assessmentError) throw assessmentError;
+
+      // Copy all assessment items
+      const newItems = assessmentItems.map((item) => ({
+        assessment_id: newAssessment.id,
+        recommendation_id: item.recommendation_id,
+        maturity_level: item.maturity_level,
+        status: item.status,
+        notes: item.notes,
+        recommended_actions: item.recommended_actions,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("assessment_items")
+        .insert(newItems);
+
+      if (itemsError) throw itemsError;
+
+      toast.success(`Version ${newAssessment.version} oprettet!`);
+      navigate(`/assessment/${newAssessment.id}/wizard`);
+    } catch (error) {
+      console.error("Error creating new version:", error);
+      toast.error("Kunne ikke oprette ny version");
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
 
   const handleDownloadPDF = async () => {
     setGenerating(true);
@@ -134,18 +183,33 @@ const AssessmentReport = () => {
                 Tilbage
               </Button>
             </Link>
-            <Button
-              onClick={handleDownloadPDF}
-              disabled={generating}
-              className="gap-2 bg-gradient-primary hover:opacity-90"
-            >
-              {generating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {generating ? "Genererer..." : "Download PDF"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCreateNewVersion}
+                disabled={creatingVersion}
+                variant="outline"
+                className="gap-2"
+              >
+                {creatingVersion ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {creatingVersion ? "Opretter..." : "Opret Ny Version"}
+              </Button>
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={generating}
+                className="gap-2 bg-gradient-primary hover:opacity-90"
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {generating ? "Genererer..." : "Download PDF"}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -155,6 +219,9 @@ const AssessmentReport = () => {
           <div className="mb-6 text-center">
             <h1 className="mb-2 text-3xl font-bold text-foreground">{assessment.customers?.name}</h1>
             <p className="text-muted-foreground">Cybersikkerhedsvurdering</p>
+            {assessment.version && assessment.version > 1 && (
+              <p className="mt-1 text-sm font-semibold text-primary">Version {assessment.version}</p>
+            )}
           </div>
 
           <div className="mb-8 grid gap-4 md:grid-cols-2">
