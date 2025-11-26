@@ -201,7 +201,14 @@ const AssessmentWizard = () => {
               </Button>
             </Link>
             <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{assessment.customers?.name}</p>
+              <p className="text-sm font-medium text-foreground">
+                {assessment.customers?.name}
+                {assessment.version && assessment.version > 1 && (
+                  <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    v{assessment.version}
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-muted-foreground">
                 Konsulent: {assessment.consultant_name}
               </p>

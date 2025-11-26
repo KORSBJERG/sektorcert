@@ -233,12 +233,17 @@ const CustomerDetail = () => {
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="flex flex-1 items-center justify-between">
+                     <div className="flex flex-1 items-center justify-between">
                       <div>
                         <p className="font-semibold text-foreground">
                           {format(new Date(assessment.assessment_date), "d. MMMM yyyy", {
                             locale: da,
                           })}
+                          {assessment.version && assessment.version > 1 && (
+                            <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                              v{assessment.version}
+                            </span>
+                          )}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Konsulent: {assessment.consultant_name}

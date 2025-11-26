@@ -109,8 +109,10 @@ export type Database = {
           customer_id: string
           id: string
           overall_maturity_score: number | null
+          parent_assessment_id: string | null
           status: string
           updated_at: string
+          version: number
         }
         Insert: {
           assessment_date?: string
@@ -120,8 +122,10 @@ export type Database = {
           customer_id: string
           id?: string
           overall_maturity_score?: number | null
+          parent_assessment_id?: string | null
           status?: string
           updated_at?: string
+          version?: number
         }
         Update: {
           assessment_date?: string
@@ -131,8 +135,10 @@ export type Database = {
           customer_id?: string
           id?: string
           overall_maturity_score?: number | null
+          parent_assessment_id?: string | null
           status?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -140,6 +146,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_parent_assessment_id_fkey"
+            columns: ["parent_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
         ]
