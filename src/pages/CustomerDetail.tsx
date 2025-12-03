@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import AssessmentVersionHistory from "@/components/AssessmentVersionHistory";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -251,6 +252,11 @@ const CustomerDetail = () => {
                         <p className="text-xs text-muted-foreground">Status: {assessment.status}</p>
                       </div>
                       <div className="flex gap-2">
+                        <AssessmentVersionHistory
+                          assessmentId={assessment.id}
+                          parentAssessmentId={assessment.parent_assessment_id}
+                          currentVersion={assessment.version}
+                        />
                         <Button
                           onClick={() => navigate(`/assessments/${assessment.id}`)}
                           variant="outline"

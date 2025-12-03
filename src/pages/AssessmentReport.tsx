@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
 import { useState } from "react";
+import AssessmentVersionHistory from "@/components/AssessmentVersionHistory";
 
 const AssessmentReport = () => {
   const { id } = useParams();
@@ -184,6 +185,11 @@ const AssessmentReport = () => {
               </Button>
             </Link>
             <div className="flex gap-2">
+              <AssessmentVersionHistory
+                assessmentId={assessment.id}
+                parentAssessmentId={assessment.parent_assessment_id}
+                currentVersion={assessment.version || 1}
+              />
               <Button
                 onClick={handleCreateNewVersion}
                 disabled={creatingVersion}
