@@ -19,7 +19,7 @@ import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import AssessmentVersionHistory from "@/components/AssessmentVersionHistory";
+import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory";
 
 const CustomerDetail = () => {
   const { id } = useParams();
