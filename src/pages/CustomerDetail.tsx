@@ -20,6 +20,8 @@ import { da } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory";
+import { SecurityReportUpload } from "@/components/SecurityReportUpload";
+import { SecurityReportsList } from "@/components/SecurityReportsList";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -162,13 +164,16 @@ const CustomerDetail = () => {
                 </Button>
               </Link>
             </div>
-            <Button
-              onClick={() => navigate(`/assessments/new?customer=${id}`)}
-              className="gap-2 bg-gradient-primary hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" />
-              Ny Vurdering
-            </Button>
+            <div className="flex gap-2">
+              <SecurityReportUpload customerId={id!} />
+              <Button
+                onClick={() => navigate(`/assessments/new?customer=${id}`)}
+                className="gap-2 bg-gradient-primary hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                Ny Vurdering
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -194,6 +199,10 @@ const CustomerDetail = () => {
               <p className="text-foreground">{customer.contact_email || "Ikke angivet"}</p>
             </div>
           </div>
+        </Card>
+
+        <Card className="mb-6 p-6 shadow-elevated">
+          <SecurityReportsList customerId={id!} />
         </Card>
 
         <Card className="p-6 shadow-elevated">

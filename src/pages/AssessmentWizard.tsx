@@ -10,6 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, Save, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { SecurityReportUpload } from "@/components/SecurityReportUpload";
+import { SecurityReportsList } from "@/components/SecurityReportsList";
 
 const AssessmentWizard = () => {
   const { id } = useParams();
@@ -200,6 +202,13 @@ const AssessmentWizard = () => {
                 Tilbage
               </Button>
             </Link>
+            <div className="flex items-center gap-2">
+              <SecurityReportUpload 
+                customerId={assessment.customer_id} 
+                assessmentId={id}
+                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ["assessment-items", id] })}
+              />
+            </div>
             <div className="text-right">
               <p className="text-sm font-medium text-foreground">
                 {assessment.customers?.name}
@@ -227,6 +236,15 @@ const AssessmentWizard = () => {
       </header>
 
       <main className="container mx-auto max-w-4xl px-4 py-8">
+        {/* Security Reports Section */}
+        <Card className="mb-6 p-4 shadow-elevated">
+          <SecurityReportsList 
+            customerId={assessment.customer_id} 
+            assessmentId={id}
+            onApplyMatches={() => queryClient.invalidateQueries({ queryKey: ["assessment-items", id] })}
+          />
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Left side - Recommendation info */}
           <Card className="p-6 shadow-elevated">

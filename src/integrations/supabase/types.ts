@@ -280,6 +280,126 @@ export type Database = {
         }
         Relationships: []
       }
+      security_report_matches: {
+        Row: {
+          applied: boolean | null
+          assessment_item_id: string | null
+          created_at: string
+          id: string
+          match_confidence: number | null
+          recommendation_id: number | null
+          report_recommendation_name: string
+          report_status: string | null
+          security_report_id: string
+          suggested_maturity_level: number | null
+        }
+        Insert: {
+          applied?: boolean | null
+          assessment_item_id?: string | null
+          created_at?: string
+          id?: string
+          match_confidence?: number | null
+          recommendation_id?: number | null
+          report_recommendation_name: string
+          report_status?: string | null
+          security_report_id: string
+          suggested_maturity_level?: number | null
+        }
+        Update: {
+          applied?: boolean | null
+          assessment_item_id?: string | null
+          created_at?: string
+          id?: string
+          match_confidence?: number | null
+          recommendation_id?: number | null
+          report_recommendation_name?: string
+          report_status?: string | null
+          security_report_id?: string
+          suggested_maturity_level?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_report_matches_assessment_item_id_fkey"
+            columns: ["assessment_item_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_report_matches_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_report_matches_security_report_id_fkey"
+            columns: ["security_report_id"]
+            isOneToOne: false
+            referencedRelation: "security_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_reports: {
+        Row: {
+          analysis_result: Json | null
+          analysis_status: string | null
+          created_at: string
+          created_by_user_id: string | null
+          customer_id: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          overall_status_percentage: number | null
+          report_type: string | null
+          secure_score_current: number | null
+          secure_score_predicted: number | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_result?: Json | null
+          analysis_status?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          customer_id: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          overall_status_percentage?: number | null
+          report_type?: string | null
+          secure_score_current?: number | null
+          secure_score_predicted?: number | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_result?: Json | null
+          analysis_status?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          customer_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          overall_status_percentage?: number | null
+          report_type?: string | null
+          secure_score_current?: number | null
+          secure_score_predicted?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_reports_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
