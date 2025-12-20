@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
 import { useState } from "react";
-import AssessmentVersionHistory from "@/components/AssessmentVersionHistory";
+import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory";
 
 const AssessmentReport = () => {
   const { id } = useParams();
