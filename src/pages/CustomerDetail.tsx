@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory";
 import { SecurityReportUpload } from "@/components/SecurityReportUpload";
 import { SecurityReportsList } from "@/components/SecurityReportsList";
+import { SecurityReportsComparison } from "@/components/SecurityReportsComparison";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -202,6 +203,10 @@ const CustomerDetail = () => {
         </Card>
 
         <Card className="mb-6 p-6 shadow-elevated">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-foreground">Sikkerhedsrapporter</h3>
+            <SecurityReportsComparison customerId={id!} />
+          </div>
           <SecurityReportsList customerId={id!} />
         </Card>
 
