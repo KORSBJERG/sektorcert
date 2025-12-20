@@ -33,7 +33,8 @@ import {
   TrendingDown,
   Minus,
   Eye,
-  Zap
+  Zap,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -217,6 +218,34 @@ export function SecurityReportsList({
     }
   };
 
+  const handleDownloadPdf = async (reportId: string, fileName: string) => {
+    try {
+      toast.info("Genererer PDF...");
+      
+      const { data, error } = await supabase.functions.invoke("generate-security-report-pdf", {
+        body: { reportId },
+      });
+
+      if (error) throw error;
+
+      if (data?.html) {
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        }
+        toast.success("PDF klar til print");
+      }
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast.error("Kunne ikke generere PDF");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
@@ -353,17 +382,25 @@ export function SecurityReportsList({
                     </div>
                   </ScrollArea>
                   
-                  {assessmentId && (
-                    <div className="flex justify-end pt-4">
+                  <div className="flex justify-end gap-2 pt-4">
                       <Button 
-                        onClick={() => handleApplyMatches(report.id)}
-                        className="gap-2 bg-gradient-primary"
+                        variant="outline"
+                        onClick={() => handleDownloadPdf(report.id, report.file_name)}
+                        className="gap-2"
                       >
-                        <Zap className="h-4 w-4" />
-                        Anvend alle matches
+                        <Download className="h-4 w-4" />
+                        Download PDF
                       </Button>
+                      {assessmentId && (
+                        <Button 
+                          onClick={() => handleApplyMatches(report.id)}
+                          className="gap-2 bg-gradient-primary"
+                        >
+                          <Zap className="h-4 w-4" />
+                          Anvend alle matches
+                        </Button>
+                      )}
                     </div>
-                  )}
                 </DialogContent>
               </Dialog>
               
