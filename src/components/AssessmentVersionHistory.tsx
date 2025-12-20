@@ -437,3 +437,5 @@ export function AssessmentVersionHistory({
     </Dialog>
   );
 }
+
+export default AssessmentVersionHistory;
