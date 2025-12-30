@@ -31,14 +31,15 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
   const [testSuccess, setTestSuccess] = useState(false);
   const [organizationId, setOrganizationId] = useState(existingIntegration?.organization_id || "");
   const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleTestConnection = async () => {
-    if (!apiKey) {
+    if (!apiKey || !apiSecret) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst API Key",
+        description: "Indtast venligst API Key og Secret",
         variant: "destructive",
       });
       return;
@@ -48,25 +49,22 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
     setTestSuccess(false);
 
     try {
-      const response = await fetch("https://api.huntress.io/v1/account", {
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-        },
+      const { data, error } = await supabase.functions.invoke("huntress-organizations", {
+        body: { apiKey, apiSecret },
       });
 
-      if (response.ok) {
-        setTestSuccess(true);
-        toast({
-          title: "Forbindelse OK",
-          description: "Huntress API-forbindelsen virker korrekt",
-        });
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
+      if (error) throw error;
+
+      setTestSuccess(true);
+      toast({
+        title: "Forbindelse OK",
+        description: `Fandt ${data.organizations?.length || 0} organisationer`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
       toast({
         title: "Forbindelsesfejl",
-        description: "Kunne ikke oprette forbindelse til Huntress API. Tjek dine credentials.",
+        description: `Kunne ikke oprette forbindelse: ${message}`,
         variant: "destructive",
       });
     } finally {
@@ -75,10 +73,10 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
   };
 
   const handleSave = async () => {
-    if (!apiKey) {
+    if (!apiKey || !apiSecret) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst API Key",
+        description: "Indtast venligst API Key og Secret",
         variant: "destructive",
       });
       return;
@@ -96,7 +94,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
           .update({
             organization_id: organizationId || null,
             public_key: apiKey,
-            private_key: apiKey, // Store same key in both for compatibility
+            private_key: apiSecret,
             sync_status: "pending",
           })
           .eq("id", existingIntegration.id);
@@ -110,7 +108,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
             created_by_user_id: user.id,
             organization_id: organizationId || null,
             public_key: apiKey,
-            private_key: apiKey, // Store same key in both for compatibility
+            private_key: apiSecret,
           });
 
         if (error) throw error;
@@ -167,7 +165,17 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Din Huntress API Key (hk_...)"
+              placeholder="Din Huntress API Key"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="apiSecret">API Secret *</Label>
+            <Input
+              id="apiSecret"
+              type="password"
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              placeholder="Din Huntress API Secret"
             />
           </div>
         </div>
@@ -175,7 +183,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
           <Button
             variant="outline"
             onClick={handleTestConnection}
-            disabled={testing || !apiKey}
+            disabled={testing || !apiKey || !apiSecret}
           >
             {testing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -184,7 +192,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
             ) : null}
             Test forbindelse
           </Button>
-          <Button onClick={handleSave} disabled={loading || !apiKey}>
+          <Button onClick={handleSave} disabled={loading || !apiKey || !apiSecret}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Gem
           </Button>

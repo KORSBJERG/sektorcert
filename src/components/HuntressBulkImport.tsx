@@ -43,6 +43,7 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
   const [organizations, setOrganizations] = useState<HuntressOrganization[]>([]);
   const [selectedOrgs, setSelectedOrgs] = useState<number[]>([]);
   const [importProgress, setImportProgress] = useState(0);
@@ -65,10 +66,10 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
   });
 
   const handleFetchOrganizations = async () => {
-    if (!apiKey) {
+    if (!apiKey || !apiSecret) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst API Key",
+        description: "Indtast venligst API Key og Secret",
         variant: "destructive",
       });
       return;
@@ -77,7 +78,7 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
     setFetching(true);
     try {
       const { data, error } = await supabase.functions.invoke("huntress-organizations", {
-        body: { apiKey },
+        body: { apiKey, apiSecret },
       });
 
       if (error) {
@@ -193,7 +194,7 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
             .update({
               organization_id: String(org.id),
               public_key: apiKey,
-              private_key: apiKey,
+              private_key: apiSecret,
               sync_status: "pending",
             })
             .eq("id", existingIntegration.id);
@@ -206,7 +207,7 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
               created_by_user_id: user.id,
               organization_id: String(org.id),
               public_key: apiKey,
-              private_key: apiKey,
+              private_key: apiSecret,
             });
 
           if (integrationError) {
@@ -350,13 +351,24 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Din Huntress API Key (hk_...)"
+                placeholder="Din Huntress API Key"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="bulk-apiSecret">API Secret</Label>
+              <Input
+                id="bulk-apiSecret"
+                type="password"
+                value={apiSecret}
+                onChange={(e) => setApiSecret(e.target.value)}
+                placeholder="Din Huntress API Secret"
               />
             </div>
 
             <Button
               onClick={handleFetchOrganizations}
-              disabled={fetching || !apiKey}
+              disabled={fetching || !apiKey || !apiSecret}
               className="w-full gap-2"
             >
               {fetching ? (

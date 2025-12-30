@@ -11,19 +11,19 @@ serve(async (req) => {
   }
 
   try {
-    const { apiKey } = await req.json()
+    const { apiKey, apiSecret } = await req.json()
 
-    if (!apiKey) {
+    if (!apiKey || !apiSecret) {
       return new Response(
-        JSON.stringify({ error: 'API key is required' }),
+        JSON.stringify({ error: 'API key and secret are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('Fetching organizations from Huntress API...')
 
-    // Huntress uses Basic Auth with API key as username and empty password
-    const basicAuth = btoa(`${apiKey}:`)
+    // Huntress uses Basic Auth with API key as username and secret as password
+    const basicAuth = btoa(`${apiKey}:${apiSecret}`)
 
     const response = await fetch('https://api.huntress.io/v1/organizations', {
       headers: {
