@@ -1,1 +1,16 @@
 project_id = "zulflhpajmruocscgqbt"
+
+[functions.generate-assessment-pdf]
+verify_jwt = true
+
+[functions.generate-security-report-pdf]
+verify_jwt = true
+
+[functions.analyze-security-report]
+verify_jwt = true
+
+[functions.huntress-sync]
+verify_jwt = true
+
+[functions.analyze-huntress-data]
+verify_jwt = true

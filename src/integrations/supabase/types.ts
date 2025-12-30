@@ -235,6 +235,209 @@ export type Database = {
         }
         Relationships: []
       }
+      huntress_agents: {
+        Row: {
+          created_at: string
+          defender_status: string | null
+          external_ip: string | null
+          hostname: string | null
+          huntress_agent_id: string
+          huntress_integration_id: string
+          id: string
+          last_seen_at: string | null
+          os_version: string | null
+          raw_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          defender_status?: string | null
+          external_ip?: string | null
+          hostname?: string | null
+          huntress_agent_id: string
+          huntress_integration_id: string
+          id?: string
+          last_seen_at?: string | null
+          os_version?: string | null
+          raw_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          defender_status?: string | null
+          external_ip?: string | null
+          hostname?: string | null
+          huntress_agent_id?: string
+          huntress_integration_id?: string
+          id?: string
+          last_seen_at?: string | null
+          os_version?: string | null
+          raw_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_agents_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_incidents: {
+        Row: {
+          created_at: string
+          detected_at: string | null
+          huntress_incident_id: string
+          huntress_integration_id: string
+          id: string
+          raw_data: Json | null
+          remediation_status: string | null
+          severity: string
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string | null
+          huntress_incident_id: string
+          huntress_integration_id: string
+          id?: string
+          raw_data?: Json | null
+          remediation_status?: string | null
+          severity: string
+          status: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string | null
+          huntress_incident_id?: string
+          huntress_integration_id?: string
+          id?: string
+          raw_data?: Json | null
+          remediation_status?: string | null
+          severity?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_incidents_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_integrations: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          customer_id: string
+          id: string
+          last_sync_at: string | null
+          organization_id: string | null
+          private_key: string
+          public_key: string
+          sync_error: string | null
+          sync_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          customer_id: string
+          id?: string
+          last_sync_at?: string | null
+          organization_id?: string | null
+          private_key: string
+          public_key: string
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          customer_id?: string
+          id?: string
+          last_sync_at?: string | null
+          organization_id?: string | null
+          private_key?: string
+          public_key?: string
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_integrations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_sync_results: {
+        Row: {
+          agents_count: number | null
+          analysis_result: Json | null
+          created_at: string
+          critical_incidents: number | null
+          defender_enabled_count: number | null
+          healthy_agents_percentage: number | null
+          high_incidents: number | null
+          huntress_integration_id: string
+          id: string
+          incidents_count: number | null
+          low_incidents: number | null
+          medium_incidents: number | null
+          sync_date: string
+        }
+        Insert: {
+          agents_count?: number | null
+          analysis_result?: Json | null
+          created_at?: string
+          critical_incidents?: number | null
+          defender_enabled_count?: number | null
+          healthy_agents_percentage?: number | null
+          high_incidents?: number | null
+          huntress_integration_id: string
+          id?: string
+          incidents_count?: number | null
+          low_incidents?: number | null
+          medium_incidents?: number | null
+          sync_date?: string
+        }
+        Update: {
+          agents_count?: number | null
+          analysis_result?: Json | null
+          created_at?: string
+          critical_incidents?: number | null
+          defender_enabled_count?: number | null
+          healthy_agents_percentage?: number | null
+          high_incidents?: number | null
+          huntress_integration_id?: string
+          id?: string
+          incidents_count?: number | null
+          low_incidents?: number | null
+          medium_incidents?: number | null
+          sync_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_sync_results_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recommendations: {
         Row: {
           created_at: string
