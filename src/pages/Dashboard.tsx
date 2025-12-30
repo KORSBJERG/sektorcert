@@ -14,7 +14,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Shield, FileText, Users, LogOut, BarChart3, ScrollText, Trash2 } from "lucide-react";
+import { 
+  Shield, 
+  FileText, 
+  Users, 
+  LogOut, 
+  BarChart3, 
+  ScrollText, 
+  Trash2,
+  Plus,
+  ChevronRight,
+  Server,
+  AlertTriangle,
+  CheckCircle2
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -100,184 +113,313 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <header className="border-b border-border bg-card shadow-card">
+    <div className="min-h-screen bg-background">
+      {/* Top Banner */}
+      <div className="bg-primary/10 border-b border-primary/20 py-2">
+        <div className="container mx-auto px-4">
+          <p className="text-center text-sm text-primary">
+            Enterprise-grade cybersikkerhed for alle virksomheder
+          </p>
+        </div>
+      </div>
+
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
-                <Shield className="h-6 w-6 text-white" />
+              <div className="flex h-10 w-10 items-center justify-center">
+                <Shield className="h-8 w-8 text-primary" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Peaknet</h1>
-                <p className="text-sm text-muted-foreground">Cybersikkerhed Assessment</p>
-              </div>
+              <span className="text-2xl font-bold text-foreground tracking-tight">PEAKNET</span>
             </div>
+            
+            <nav className="hidden md:flex items-center gap-6">
+              <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/customers" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Kunder
+              </Link>
+              <Link to="/analytics" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Analytics
+              </Link>
+              <Link to="/audit-logs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Audit Log
+              </Link>
+            </nav>
+
             <div className="flex items-center gap-3">
               <HuntressBulkImport onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
-              <Link to="/analytics">
-                <Button variant="outline" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Analytics
-                </Button>
-              </Link>
-              <Link to="/audit-logs">
-                <Button variant="outline" className="gap-2">
-                  <ScrollText className="h-4 w-4" />
-                  Audit Log
-                </Button>
-              </Link>
               <Link to="/customers/new">
-                <Button className="gap-2 bg-gradient-primary hover:opacity-90">
+                <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                   <Plus className="h-4 w-4" />
                   Ny Kunde
                 </Button>
               </Link>
-              <Button variant="outline" onClick={handleLogout} className="gap-2">
-                <LogOut className="h-4 w-4" />
-                Log ud
+              <Button variant="ghost" onClick={handleLogout} size="icon">
+                <LogOut className="h-4 w-4 text-muted-foreground" />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
-          <Card className="p-6 shadow-card">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Kunder</p>
-                <p className="text-2xl font-bold text-foreground">{customers?.length || 0}</p>
-              </div>
+      {/* Hero Section */}
+      <section className="py-16 md:py-24 bg-gradient-hero">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+            <span className="text-foreground">Hackere Stoppet.</span>
+            <br />
+            <span className="text-gradient">Din Fremtid Sikret.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            Vi beskytter din virksomhed. En platform bygget til organisationer som din, 
+            med 24/7 AI-assisteret overvågning for kontinuerlig beskyttelse.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <Link to="/customers/new">
+              <Button size="lg" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-8">
+                Start Assessment
+              </Button>
+            </Link>
+            <Link to="/analytics">
+              <Button size="lg" variant="ghost" className="gap-2 text-primary hover:text-primary hover:bg-primary/10">
+                Se Analytics <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          
+          {/* Stats Row */}
+          <div className="flex flex-wrap justify-center gap-8 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-foreground">{customers?.length || 0}</span>
+              <span>Kunder</span>
             </div>
-          </Card>
-
-          <Card className="p-6 shadow-card">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/10">
-                <FileText className="h-6 w-6 text-secondary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Vurderinger</p>
-                <p className="text-2xl font-bold text-foreground">{assessments?.length || 0}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-foreground">{assessments?.length || 0}</span>
+              <span>Vurderinger</span>
             </div>
-          </Card>
-
-          <Card className="p-6 shadow-card">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
-                <Shield className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">25 Anbefalinger</p>
-                <p className="text-2xl font-bold text-foreground">Aktive</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-foreground">25</span>
+              <span>Anbefalinger</span>
             </div>
-          </Card>
+          </div>
         </div>
+      </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6 shadow-elevated">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-foreground">Seneste Kunder</h2>
-              <Link to="/customers">
-                <Button variant="outline" size="sm">Se alle</Button>
-              </Link>
-            </div>
-            {loadingCustomers ? (
-              <div className="py-8 text-center text-muted-foreground">Indlæser...</div>
-            ) : customers && customers.length > 0 ? (
-              <div className="space-y-3">
-                {customers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{customer.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {customer.operation_type} • {customer.contact_person}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link to={`/customers/${customer.id}`}>
-                        <Button variant="outline" size="sm">Se detaljer</Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCustomerToDelete(customer.id);
-                          setCustomerDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+      {/* Feature Cards */}
+      <section className="py-12 md:py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="p-8 border-border/50 bg-card hover:border-primary/30 transition-all duration-300 group">
+              <div className="mb-6">
+                <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                  <Server className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold text-primary mb-4">
+                  Du Behøver Ikke<br />Administrere Noget
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Vores produkter er bygget til at beskytte organisationer i alle størrelser. 
+                  Vi ejer vores teknologi og innoverer hurtigere end andre leverandører.
+                </p>
               </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="mb-4 text-muted-foreground">Ingen kunder endnu</p>
-                <Link to="/customers/new">
-                  <Button className="bg-gradient-primary hover:opacity-90">Opret første kunde</Button>
+              <div className="pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-2xl font-bold text-foreground">{customers?.length || 0}</span> aktive kunder
+                </p>
+              </div>
+            </Card>
+
+            <Card className="p-8 border-border/50 bg-card hover:border-primary/30 transition-all duration-300 group">
+              <div className="mb-6">
+                <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                  <AlertTriangle className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold text-primary mb-4">
+                  Expert Threat<br />Hunters, På Dit Hold
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Vores AI-assisterede threat hunters er din fordel mod hackere. 
+                  Vi afdækker de nyeste trusler og leder forskning gennem remediation.
+                </p>
+              </div>
+              <div className="pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-2xl font-bold text-foreground">98.8%</span> kundetilfredshed
+                </p>
+              </div>
+            </Card>
+
+            <Card className="p-8 border-border/50 bg-card hover:border-primary/30 transition-all duration-300 group">
+              <div className="mb-6">
+                <div className="h-14 w-14 rounded-lg bg-secondary flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                  <Shield className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold text-primary mb-4">
+                  Bygget Til<br />Resultater
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Du får ro i sindet med avancerede løsninger der udvikler sig med trusler. 
+                  Ingen huller, ingen blinde vinkler, ingen gætværk.
+                </p>
+              </div>
+              <div className="pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-2xl font-bold text-foreground">4.9/5</span> stjerner baseret på anmeldelser
+                </p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Recent Activity Section */}
+      <section className="py-12 md:py-16 bg-card/30">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Recent Customers */}
+            <Card className="p-6 border-border/50 bg-card">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold text-foreground">Seneste Kunder</h2>
+                </div>
+                <Link to="/customers">
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">
+                    Se alle <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
                 </Link>
               </div>
-            )}
-          </Card>
+              
+              {loadingCustomers ? (
+                <div className="py-12 text-center text-muted-foreground">Indlæser...</div>
+              ) : customers && customers.length > 0 ? (
+                <div className="space-y-3">
+                  {customers.slice(0, 5).map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 p-4 transition-all hover:bg-secondary/50 hover:border-primary/30"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">{customer.name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {customer.operation_type} • {customer.contact_person}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Link to={`/customers/${customer.id}`}>
+                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                            Detaljer
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setCustomerToDelete(customer.id);
+                            setCustomerDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="mb-4 text-muted-foreground">Ingen kunder endnu</p>
+                  <Link to="/customers/new">
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      Opret første kunde
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </Card>
 
-          <Card className="p-6 shadow-elevated">
-            <h2 className="mb-4 text-xl font-semibold text-foreground">Seneste Vurderinger</h2>
-            {assessments && assessments.length > 0 ? (
-              <div className="space-y-3">
-                {assessments.map((assessment) => (
-                  <div
-                    key={assessment.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-accent"
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">
-                        {assessment.customers?.name || "Ukendt kunde"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(assessment.assessment_date), "d. MMMM yyyy", { locale: da })} • {assessment.consultant_name}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link to={`/assessment/${assessment.id}/report`}>
-                        <Button variant="outline" size="sm">Se detaljer</Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setAssessmentToDelete(assessment.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+            {/* Recent Assessments */}
+            <Card className="p-6 border-border/50 bg-card">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold text-foreground">Seneste Vurderinger</h2>
+                </div>
               </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="mb-4 text-muted-foreground">Ingen vurderinger endnu</p>
-              </div>
-            )}
-          </Card>
+              
+              {assessments && assessments.length > 0 ? (
+                <div className="space-y-3">
+                  {assessments.slice(0, 5).map((assessment) => (
+                    <div
+                      key={assessment.id}
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 p-4 transition-all hover:bg-secondary/50 hover:border-primary/30"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">
+                          {assessment.customers?.name || "Ukendt kunde"}
+                        </h3>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {format(new Date(assessment.assessment_date), "d. MMMM yyyy", { locale: da })} • {assessment.consultant_name}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Link to={`/assessment/${assessment.id}/report`}>
+                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                            Se rapport
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setAssessmentToDelete(assessment.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-muted-foreground">Ingen vurderinger endnu</p>
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
-      </main>
+      </section>
 
+      {/* Footer */}
+      <footer className="py-8 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-foreground">PEAKNET</span>
+              <span className="text-muted-foreground">• Cybersikkerhed Assessment Platform</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link to="/analytics" className="hover:text-primary transition-colors">Analytics</Link>
+              <Link to="/audit-logs" className="hover:text-primary transition-colors">Audit Log</Link>
+              <Link to="/customers" className="hover:text-primary transition-colors">Kunder</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Delete Assessment Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle>Bekræft sletning af vurdering</AlertDialogTitle>
             <AlertDialogDescription>
@@ -285,7 +427,7 @@ const Dashboard = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">Annuller</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAssessment} className="bg-destructive hover:bg-destructive/90">
               Slet
             </AlertDialogAction>
@@ -293,8 +435,9 @@ const Dashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Customer Dialog */}
       <AlertDialog open={customerDeleteDialogOpen} onOpenChange={setCustomerDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle>Bekræft sletning af kunde</AlertDialogTitle>
             <AlertDialogDescription>
@@ -302,7 +445,7 @@ const Dashboard = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">Annuller</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive hover:bg-destructive/90">
               Slet kunde
             </AlertDialogAction>
