@@ -112,16 +112,18 @@ serve(async (req) => {
     let signalsData: HuntressSignal[] = [];
     let syncErrors: string[] = [];
 
-    const baseUrl = integration.organization_id
-      ? `https://api.huntress.io/v1/organizations/${integration.organization_id}`
-      : "https://api.huntress.io/v1";
+    const baseUrl = "https://api.huntress.io/v1";
+    const orgFilter = integration.organization_id ? `organization_id=${integration.organization_id}` : "";
 
     // Fetch incidents
     if (syncOptions.incidents) {
       try {
         console.log("Fetching incidents from Huntress API...");
-        const incidentsUrl = `${baseUrl}/incident_reports`;
+        const incidentsUrl = orgFilter 
+          ? `${baseUrl}/incident_reports?${orgFilter}`
+          : `${baseUrl}/incident_reports`;
         
+        console.log("Incidents URL:", incidentsUrl);
         const incidentsResponse = await fetch(incidentsUrl, { headers });
         
         if (incidentsResponse.ok) {
@@ -143,8 +145,11 @@ serve(async (req) => {
     if (syncOptions.agents) {
       try {
         console.log("Fetching agents from Huntress API...");
-        const agentsUrl = `${baseUrl}/agents`;
+        const agentsUrl = orgFilter 
+          ? `${baseUrl}/agents?${orgFilter}`
+          : `${baseUrl}/agents`;
         
+        console.log("Agents URL:", agentsUrl);
         const agentsResponse = await fetch(agentsUrl, { headers });
         
         if (agentsResponse.ok) {
@@ -166,8 +171,11 @@ serve(async (req) => {
     if (syncOptions.reports) {
       try {
         console.log("Fetching reports from Huntress API...");
-        const reportsUrl = `${baseUrl}/reports`;
+        const reportsUrl = orgFilter 
+          ? `${baseUrl}/reports?${orgFilter}`
+          : `${baseUrl}/reports`;
         
+        console.log("Reports URL:", reportsUrl);
         const reportsResponse = await fetch(reportsUrl, { headers });
         
         if (reportsResponse.ok) {
@@ -188,17 +196,20 @@ serve(async (req) => {
       }
     }
 
-    // Fetch signals
+    // Fetch signals (using footholds endpoint as signals)
     if (syncOptions.signals) {
       try {
-        console.log("Fetching signals from Huntress API...");
-        const signalsUrl = `${baseUrl}/signals`;
+        console.log("Fetching footholds/signals from Huntress API...");
+        const signalsUrl = orgFilter 
+          ? `${baseUrl}/footholds?${orgFilter}`
+          : `${baseUrl}/footholds`;
         
+        console.log("Signals URL:", signalsUrl);
         const signalsResponse = await fetch(signalsUrl, { headers });
         
         if (signalsResponse.ok) {
           const signalsJson = await signalsResponse.json();
-          signalsData = signalsJson.signals || signalsJson.data || [];
+          signalsData = signalsJson.footholds || signalsJson.data || [];
           console.log(`Fetched ${signalsData.length} signals`);
         } else {
           const errorText = await signalsResponse.text();
