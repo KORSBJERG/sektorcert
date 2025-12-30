@@ -27,6 +27,26 @@ interface HuntressIncident {
   remediation_status?: string;
 }
 
+interface HuntressReport {
+  id: string;
+  report_type: string;
+  generated_at: string;
+}
+
+interface HuntressSignal {
+  id: string;
+  signal_type: string;
+  hostname: string;
+  detected_at: string;
+}
+
+interface SyncOptions {
+  incidents: boolean;
+  agents: boolean;
+  reports: boolean;
+  signals: boolean;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +57,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { integrationId } = await req.json();
+    const { integrationId, syncOptions: requestSyncOptions } = await req.json();
 
     if (!integrationId) {
       return new Response(
@@ -63,73 +83,141 @@ serve(async (req) => {
       );
     }
 
+    // Use sync options from request or from integration settings
+    const syncOptions: SyncOptions = requestSyncOptions || integration.sync_options || {
+      incidents: true,
+      agents: true,
+      reports: true,
+      signals: true,
+    };
+
+    console.log("Sync options:", syncOptions);
+
     // Update sync status to syncing
     await supabase
       .from("huntress_integrations")
       .update({ sync_status: "syncing", sync_error: null })
       .eq("id", integrationId);
 
-    // Use Bearer token (API Key stored in public_key field)
+    // Use Basic Auth with API key and secret
+    const basicAuth = btoa(`${integration.public_key}:${integration.private_key}`);
     const headers = {
-      "Authorization": `Bearer ${integration.public_key}`,
+      "Authorization": `Basic ${basicAuth}`,
       "Content-Type": "application/json",
     };
 
     let incidentsData: HuntressIncident[] = [];
     let agentsData: HuntressAgent[] = [];
+    let reportsData: HuntressReport[] = [];
+    let signalsData: HuntressSignal[] = [];
     let syncErrors: string[] = [];
 
+    const baseUrl = integration.organization_id
+      ? `https://api.huntress.io/v1/organizations/${integration.organization_id}`
+      : "https://api.huntress.io/v1";
+
     // Fetch incidents
-    try {
-      console.log("Fetching incidents from Huntress API...");
-      const incidentsUrl = integration.organization_id
-        ? `https://api.huntress.io/v1/organizations/${integration.organization_id}/incident_reports`
-        : "https://api.huntress.io/v1/incident_reports";
-      
-      const incidentsResponse = await fetch(incidentsUrl, { headers });
-      
-      if (incidentsResponse.ok) {
-        const incidentsJson = await incidentsResponse.json();
-        incidentsData = incidentsJson.incident_reports || incidentsJson.data || [];
-        console.log(`Fetched ${incidentsData.length} incidents`);
-      } else {
-        const errorText = await incidentsResponse.text();
-        console.error("Incidents fetch failed:", incidentsResponse.status, errorText);
-        syncErrors.push(`Incidents: ${incidentsResponse.status}`);
+    if (syncOptions.incidents) {
+      try {
+        console.log("Fetching incidents from Huntress API...");
+        const incidentsUrl = `${baseUrl}/incident_reports`;
+        
+        const incidentsResponse = await fetch(incidentsUrl, { headers });
+        
+        if (incidentsResponse.ok) {
+          const incidentsJson = await incidentsResponse.json();
+          incidentsData = incidentsJson.incident_reports || incidentsJson.data || [];
+          console.log(`Fetched ${incidentsData.length} incidents`);
+        } else {
+          const errorText = await incidentsResponse.text();
+          console.error("Incidents fetch failed:", incidentsResponse.status, errorText);
+          syncErrors.push(`Incidents: ${incidentsResponse.status}`);
+        }
+      } catch (e: any) {
+        console.error("Error fetching incidents:", e);
+        syncErrors.push(`Incidents: ${e?.message || "Unknown error"}`);
       }
-    } catch (e: any) {
-      console.error("Error fetching incidents:", e);
-      syncErrors.push(`Incidents: ${e?.message || "Unknown error"}`);
     }
 
     // Fetch agents
-    try {
-      console.log("Fetching agents from Huntress API...");
-      const agentsUrl = integration.organization_id
-        ? `https://api.huntress.io/v1/organizations/${integration.organization_id}/agents`
-        : "https://api.huntress.io/v1/agents";
-      
-      const agentsResponse = await fetch(agentsUrl, { headers });
-      
-      if (agentsResponse.ok) {
-        const agentsJson = await agentsResponse.json();
-        agentsData = agentsJson.agents || agentsJson.data || [];
-        console.log(`Fetched ${agentsData.length} agents`);
-      } else {
-        const errorText = await agentsResponse.text();
-        console.error("Agents fetch failed:", agentsResponse.status, errorText);
-        syncErrors.push(`Agents: ${agentsResponse.status}`);
+    if (syncOptions.agents) {
+      try {
+        console.log("Fetching agents from Huntress API...");
+        const agentsUrl = `${baseUrl}/agents`;
+        
+        const agentsResponse = await fetch(agentsUrl, { headers });
+        
+        if (agentsResponse.ok) {
+          const agentsJson = await agentsResponse.json();
+          agentsData = agentsJson.agents || agentsJson.data || [];
+          console.log(`Fetched ${agentsData.length} agents`);
+        } else {
+          const errorText = await agentsResponse.text();
+          console.error("Agents fetch failed:", agentsResponse.status, errorText);
+          syncErrors.push(`Agents: ${agentsResponse.status}`);
+        }
+      } catch (e: any) {
+        console.error("Error fetching agents:", e);
+        syncErrors.push(`Agents: ${e?.message || "Unknown error"}`);
       }
-    } catch (e: any) {
-      console.error("Error fetching agents:", e);
-      syncErrors.push(`Agents: ${e?.message || "Unknown error"}`);
+    }
+
+    // Fetch reports
+    if (syncOptions.reports) {
+      try {
+        console.log("Fetching reports from Huntress API...");
+        const reportsUrl = `${baseUrl}/reports`;
+        
+        const reportsResponse = await fetch(reportsUrl, { headers });
+        
+        if (reportsResponse.ok) {
+          const reportsJson = await reportsResponse.json();
+          reportsData = reportsJson.reports || reportsJson.data || [];
+          console.log(`Fetched ${reportsData.length} reports`);
+        } else {
+          const errorText = await reportsResponse.text();
+          console.error("Reports fetch failed:", reportsResponse.status, errorText);
+          // Don't add error for 404 - endpoint might not be available
+          if (reportsResponse.status !== 404) {
+            syncErrors.push(`Reports: ${reportsResponse.status}`);
+          }
+        }
+      } catch (e: any) {
+        console.error("Error fetching reports:", e);
+        syncErrors.push(`Reports: ${e?.message || "Unknown error"}`);
+      }
+    }
+
+    // Fetch signals
+    if (syncOptions.signals) {
+      try {
+        console.log("Fetching signals from Huntress API...");
+        const signalsUrl = `${baseUrl}/signals`;
+        
+        const signalsResponse = await fetch(signalsUrl, { headers });
+        
+        if (signalsResponse.ok) {
+          const signalsJson = await signalsResponse.json();
+          signalsData = signalsJson.signals || signalsJson.data || [];
+          console.log(`Fetched ${signalsData.length} signals`);
+        } else {
+          const errorText = await signalsResponse.text();
+          console.error("Signals fetch failed:", signalsResponse.status, errorText);
+          // Don't add error for 404 - endpoint might not be available
+          if (signalsResponse.status !== 404) {
+            syncErrors.push(`Signals: ${signalsResponse.status}`);
+          }
+        }
+      } catch (e: any) {
+        console.error("Error fetching signals:", e);
+        syncErrors.push(`Signals: ${e?.message || "Unknown error"}`);
+      }
     }
 
     // Store incidents
-    if (incidentsData.length > 0) {
+    if (syncOptions.incidents && incidentsData.length > 0) {
       console.log("Storing incidents...");
       
-      // Clear old incidents first
       await supabase
         .from("huntress_incidents")
         .delete()
@@ -157,10 +245,9 @@ serve(async (req) => {
     }
 
     // Store agents
-    if (agentsData.length > 0) {
+    if (syncOptions.agents && agentsData.length > 0) {
       console.log("Storing agents...");
       
-      // Clear old agents first
       await supabase
         .from("huntress_agents")
         .delete()
@@ -184,6 +271,61 @@ serve(async (req) => {
       if (insertAgentsError) {
         console.error("Error inserting agents:", insertAgentsError);
         syncErrors.push(`Insert agents: ${insertAgentsError.message}`);
+      }
+    }
+
+    // Store reports
+    if (syncOptions.reports && reportsData.length > 0) {
+      console.log("Storing reports...");
+      
+      await supabase
+        .from("huntress_reports")
+        .delete()
+        .eq("huntress_integration_id", integrationId);
+
+      const reportsToInsert = reportsData.map((report: HuntressReport) => ({
+        huntress_integration_id: integrationId,
+        huntress_report_id: String(report.id),
+        report_type: report.report_type,
+        generated_at: report.generated_at,
+        raw_data: report,
+      }));
+
+      const { error: insertReportsError } = await supabase
+        .from("huntress_reports")
+        .insert(reportsToInsert);
+
+      if (insertReportsError) {
+        console.error("Error inserting reports:", insertReportsError);
+        syncErrors.push(`Insert reports: ${insertReportsError.message}`);
+      }
+    }
+
+    // Store signals
+    if (syncOptions.signals && signalsData.length > 0) {
+      console.log("Storing signals...");
+      
+      await supabase
+        .from("huntress_signals")
+        .delete()
+        .eq("huntress_integration_id", integrationId);
+
+      const signalsToInsert = signalsData.map((signal: HuntressSignal) => ({
+        huntress_integration_id: integrationId,
+        huntress_signal_id: String(signal.id),
+        signal_type: signal.signal_type,
+        hostname: signal.hostname,
+        detected_at: signal.detected_at,
+        raw_data: signal,
+      }));
+
+      const { error: insertSignalsError } = await supabase
+        .from("huntress_signals")
+        .insert(signalsToInsert);
+
+      if (insertSignalsError) {
+        console.error("Error inserting signals:", insertSignalsError);
+        syncErrors.push(`Insert signals: ${insertSignalsError.message}`);
       }
     }
 
@@ -245,6 +387,8 @@ serve(async (req) => {
         success: true,
         incidents_count: incidentsData.length,
         agents_count: agentsData.length,
+        reports_count: reportsData.length,
+        signals_count: signalsData.length,
         critical_incidents: criticalIncidents,
         high_incidents: highIncidents,
         errors: syncErrors.length > 0 ? syncErrors : undefined,
