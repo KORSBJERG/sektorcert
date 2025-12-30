@@ -22,9 +22,12 @@ serve(async (req) => {
 
     console.log('Fetching organizations from Huntress API...')
 
+    // Huntress uses Basic Auth with API key as username and empty password
+    const basicAuth = btoa(`${apiKey}:`)
+
     const response = await fetch('https://api.huntress.io/v1/organizations', {
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
       },
     })
