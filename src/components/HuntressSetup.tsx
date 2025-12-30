@@ -30,16 +30,15 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
   const [testing, setTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
   const [organizationId, setOrganizationId] = useState(existingIntegration?.organization_id || "");
-  const [publicKey, setPublicKey] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleTestConnection = async () => {
-    if (!publicKey || !privateKey) {
+    if (!apiKey) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst Public Key og Private Key",
+        description: "Indtast venligst API Key",
         variant: "destructive",
       });
       return;
@@ -49,10 +48,9 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
     setTestSuccess(false);
 
     try {
-      const authHeader = btoa(`${publicKey}:${privateKey}`);
       const response = await fetch("https://api.huntress.io/v1/account", {
         headers: {
-          "Authorization": `Basic ${authHeader}`,
+          "Authorization": `Bearer ${apiKey}`,
         },
       });
 
@@ -77,10 +75,10 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
   };
 
   const handleSave = async () => {
-    if (!publicKey || !privateKey) {
+    if (!apiKey) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst Public Key og Private Key",
+        description: "Indtast venligst API Key",
         variant: "destructive",
       });
       return;
@@ -97,8 +95,8 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
           .from("huntress_integrations")
           .update({
             organization_id: organizationId || null,
-            public_key: publicKey,
-            private_key: privateKey,
+            public_key: apiKey,
+            private_key: apiKey, // Store same key in both for compatibility
             sync_status: "pending",
           })
           .eq("id", existingIntegration.id);
@@ -111,8 +109,8 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
             customer_id: customerId,
             created_by_user_id: user.id,
             organization_id: organizationId || null,
-            public_key: publicKey,
-            private_key: privateKey,
+            public_key: apiKey,
+            private_key: apiKey, // Store same key in both for compatibility
           });
 
         if (error) throw error;
@@ -163,22 +161,13 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="publicKey">Public Key *</Label>
+            <Label htmlFor="apiKey">API Key *</Label>
             <Input
-              id="publicKey"
-              value={publicKey}
-              onChange={(e) => setPublicKey(e.target.value)}
-              placeholder="Din Huntress Public Key"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="privateKey">Private Key *</Label>
-            <Input
-              id="privateKey"
+              id="apiKey"
               type="password"
-              value={privateKey}
-              onChange={(e) => setPrivateKey(e.target.value)}
-              placeholder="Din Huntress Private Key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Din Huntress API Key (hk_...)"
             />
           </div>
         </div>
@@ -186,7 +175,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
           <Button
             variant="outline"
             onClick={handleTestConnection}
-            disabled={testing || !publicKey || !privateKey}
+            disabled={testing || !apiKey}
           >
             {testing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -195,7 +184,7 @@ export const HuntressSetup = ({ customerId, existingIntegration }: HuntressSetup
             ) : null}
             Test forbindelse
           </Button>
-          <Button onClick={handleSave} disabled={loading || !publicKey || !privateKey}>
+          <Button onClick={handleSave} disabled={loading || !apiKey}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Gem
           </Button>

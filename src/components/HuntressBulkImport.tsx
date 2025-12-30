@@ -42,8 +42,7 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [publicKey, setPublicKey] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [organizations, setOrganizations] = useState<HuntressOrganization[]>([]);
   const [selectedOrgs, setSelectedOrgs] = useState<number[]>([]);
   const [importProgress, setImportProgress] = useState(0);
@@ -66,10 +65,10 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
   });
 
   const handleFetchOrganizations = async () => {
-    if (!publicKey || !privateKey) {
+    if (!apiKey) {
       toast({
         title: "Manglende oplysninger",
-        description: "Indtast venligst Public Key og Private Key",
+        description: "Indtast venligst API Key",
         variant: "destructive",
       });
       return;
@@ -77,10 +76,9 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
 
     setFetching(true);
     try {
-      const authHeader = btoa(`${publicKey}:${privateKey}`);
       const response = await fetch("https://api.huntress.io/v1/organizations", {
         headers: {
-          "Authorization": `Basic ${authHeader}`,
+          "Authorization": `Bearer ${apiKey}`,
         },
       });
 
@@ -196,8 +194,8 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
             .from("huntress_integrations")
             .update({
               organization_id: String(org.id),
-              public_key: publicKey,
-              private_key: privateKey,
+              public_key: apiKey,
+              private_key: apiKey,
               sync_status: "pending",
             })
             .eq("id", existingIntegration.id);
@@ -209,8 +207,8 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
               customer_id: customerId,
               created_by_user_id: user.id,
               organization_id: String(org.id),
-              public_key: publicKey,
-              private_key: privateKey,
+              public_key: apiKey,
+              private_key: apiKey,
             });
 
           if (integrationError) {
@@ -347,31 +345,20 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
 
           <div className="space-y-4 py-4">
             {/* Credentials */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="bulk-publicKey">Public Key</Label>
-                <Input
-                  id="bulk-publicKey"
-                  value={publicKey}
-                  onChange={(e) => setPublicKey(e.target.value)}
-                  placeholder="Din Huntress Public Key"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="bulk-privateKey">Private Key</Label>
-                <Input
-                  id="bulk-privateKey"
-                  type="password"
-                  value={privateKey}
-                  onChange={(e) => setPrivateKey(e.target.value)}
-                  placeholder="Din Huntress Private Key"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="bulk-apiKey">API Key</Label>
+              <Input
+                id="bulk-apiKey"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Din Huntress API Key (hk_...)"
+              />
             </div>
 
             <Button
               onClick={handleFetchOrganizations}
-              disabled={fetching || !publicKey || !privateKey}
+              disabled={fetching || !apiKey}
               className="w-full gap-2"
             >
               {fetching ? (
