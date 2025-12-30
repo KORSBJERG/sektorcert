@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { useState } from "react";
@@ -23,6 +23,9 @@ import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory"
 import { SecurityReportUpload } from "@/components/SecurityReportUpload";
 import { SecurityReportsList } from "@/components/SecurityReportsList";
 import { SecurityReportsComparison } from "@/components/SecurityReportsComparison";
+import { HuntressSetup } from "@/components/HuntressSetup";
+import { HuntressDashboard } from "@/components/HuntressDashboard";
+import { HuntressMatches } from "@/components/HuntressMatches";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -59,6 +62,18 @@ const CustomerDetail = () => {
     },
   });
 
+  const { data: huntressIntegration } = useQuery({
+    queryKey: ["huntress-integration", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("huntress_integrations")
+        .select("*")
+        .eq("customer_id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
   const handleSelectAll = (checked: boolean) => {
     if (checked && assessments) {
       setSelectedAssessments(assessments.map((a) => a.id));
@@ -200,6 +215,46 @@ const CustomerDetail = () => {
               <p className="text-foreground">{customer.contact_email || "Ikke angivet"}</p>
             </div>
           </div>
+        </Card>
+
+        {/* Huntress Integration Section */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Huntress Integration</h3>
+            </div>
+            <HuntressSetup
+              customerId={id!}
+              existingIntegration={huntressIntegration ? {
+                id: huntressIntegration.id,
+                organization_id: huntressIntegration.organization_id,
+              } : null}
+            />
+          </div>
+          
+          {huntressIntegration ? (
+            <div className="space-y-6">
+              <HuntressDashboard
+                integrationId={huntressIntegration.id}
+                customerId={id!}
+              />
+              <HuntressMatches
+                integrationId={huntressIntegration.id}
+                customerId={id!}
+              />
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">
+                Ingen Huntress-integration konfigureret
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Klik på "Opsæt Huntress" for at forbinde denne kunde med Huntress
+              </p>
+            </div>
+          )}
         </Card>
 
         <Card className="mb-6 p-6 shadow-elevated">
