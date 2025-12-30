@@ -55,11 +55,13 @@ interface HuntressSignal {
 
 interface HuntressEscalation {
   id: string;
-  title: string;
+  title?: string;
+  type?: string;
   status: string;
   severity: string;
   affected_host?: string;
   created_at: string;
+  organizations?: Array<{ id: number; name: string }>;
 }
 
 interface HuntressBilling {
@@ -503,10 +505,10 @@ serve(async (req) => {
       const escalationsToInsert = escalationsData.map((escalation: HuntressEscalation) => ({
         huntress_integration_id: integrationId,
         huntress_escalation_id: String(escalation.id),
-        title: escalation.title || "Unknown",
+        title: escalation.type || escalation.title || "Unknown",
         status: escalation.status,
         severity: escalation.severity,
-        affected_host: escalation.affected_host,
+        affected_host: escalation.organizations?.[0]?.name || escalation.affected_host,
         detected_at: escalation.created_at,
         raw_data: escalation,
       }));
