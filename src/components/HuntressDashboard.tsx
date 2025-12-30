@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   RefreshCw,
@@ -15,6 +17,9 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  FileText,
+  Radio,
+  Settings2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -24,7 +29,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 import {
@@ -32,6 +36,18 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+interface SyncOptions {
+  incidents: boolean;
+  agents: boolean;
+  reports: boolean;
+  signals: boolean;
+}
 
 interface HuntressDashboardProps {
   integrationId: string;
@@ -40,6 +56,13 @@ interface HuntressDashboardProps {
 
 export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboardProps) => {
   const [syncing, setSyncing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [syncOptions, setSyncOptions] = useState<SyncOptions>({
+    incidents: true,
+    agents: true,
+    reports: true,
+    signals: true,
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -52,6 +75,16 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
         .eq("id", integrationId)
         .single();
       if (error) throw error;
+      // Set sync options from integration if available
+      if (data?.sync_options && typeof data.sync_options === 'object') {
+        const opts = data.sync_options as Record<string, boolean>;
+        setSyncOptions({
+          incidents: opts.incidents ?? true,
+          agents: opts.agents ?? true,
+          reports: opts.reports ?? true,
+          signals: opts.signals ?? true,
+        });
+      }
       return data;
     },
   });
@@ -81,6 +114,32 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
     },
   });
 
+  const { data: reports } = useQuery({
+    queryKey: ["huntress-reports", integrationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("huntress_reports")
+        .select("*")
+        .eq("huntress_integration_id", integrationId)
+        .order("generated_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: signals } = useQuery({
+    queryKey: ["huntress-signals", integrationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("huntress_signals")
+        .select("*")
+        .eq("huntress_integration_id", integrationId)
+        .order("detected_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: syncResults } = useQuery({
     queryKey: ["huntress-sync-results", integrationId],
     queryFn: async () => {
@@ -95,22 +154,52 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
     },
   });
 
-  const handleSync = async () => {
-    setSyncing(true);
+  const handleSaveSyncOptions = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("huntress-sync", {
-        body: { integrationId },
-      });
+      const { error } = await supabase
+        .from("huntress_integrations")
+        .update({ sync_options: syncOptions as unknown as Record<string, boolean> })
+        .eq("id", integrationId);
 
       if (error) throw error;
 
       toast({
+        title: "Indstillinger gemt",
+        description: "Sync indstillinger er opdateret",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fejl",
+        description: error.message || "Kunne ikke gemme indstillinger",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("huntress-sync", {
+        body: { integrationId, syncOptions },
+      });
+
+      if (error) throw error;
+
+      const counts = [];
+      if (data.incidents_count > 0) counts.push(`${data.incidents_count} incidents`);
+      if (data.agents_count > 0) counts.push(`${data.agents_count} agents`);
+      if (data.reports_count > 0) counts.push(`${data.reports_count} rapporter`);
+      if (data.signals_count > 0) counts.push(`${data.signals_count} signals`);
+
+      toast({
         title: "Synkronisering fuldført",
-        description: `Hentet ${data.incidents_count} incidents og ${data.agents_count} agents`,
+        description: counts.length > 0 ? `Hentet ${counts.join(", ")}` : "Ingen data fundet",
       });
 
       queryClient.invalidateQueries({ queryKey: ["huntress-incidents", integrationId] });
       queryClient.invalidateQueries({ queryKey: ["huntress-agents", integrationId] });
+      queryClient.invalidateQueries({ queryKey: ["huntress-reports", integrationId] });
+      queryClient.invalidateQueries({ queryKey: ["huntress-signals", integrationId] });
       queryClient.invalidateQueries({ queryKey: ["huntress-sync-results", integrationId] });
       queryClient.invalidateQueries({ queryKey: ["huntress-integration-status", integrationId] });
     } catch (error: any) {
@@ -172,6 +261,14 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
               Sidst opdateret: {format(new Date(integration.last_sync_at), "d. MMM HH:mm", { locale: da })}
             </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSettings(!showSettings)}
+            className="h-9 w-9"
+          >
+            <Settings2 className="h-4 w-4" />
+          </Button>
           <Button onClick={handleSync} disabled={syncing} variant="outline" className="gap-2">
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -182,6 +279,74 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
           </Button>
         </div>
       </div>
+
+      {/* Sync options */}
+      <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+        <CollapsibleContent>
+          <Card className="p-4 mb-4">
+            <h4 className="font-medium text-foreground mb-3">Vælg hvad der skal synkroniseres</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync-incidents"
+                  checked={syncOptions.incidents}
+                  onCheckedChange={(checked) =>
+                    setSyncOptions({ ...syncOptions, incidents: !!checked })
+                  }
+                />
+                <Label htmlFor="sync-incidents" className="flex items-center gap-2 cursor-pointer">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  Incidents
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync-agents"
+                  checked={syncOptions.agents}
+                  onCheckedChange={(checked) =>
+                    setSyncOptions({ ...syncOptions, agents: !!checked })
+                  }
+                />
+                <Label htmlFor="sync-agents" className="flex items-center gap-2 cursor-pointer">
+                  <Monitor className="h-4 w-4 text-primary" />
+                  Agents
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync-reports"
+                  checked={syncOptions.reports}
+                  onCheckedChange={(checked) =>
+                    setSyncOptions({ ...syncOptions, reports: !!checked })
+                  }
+                />
+                <Label htmlFor="sync-reports" className="flex items-center gap-2 cursor-pointer">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  Rapporter
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync-signals"
+                  checked={syncOptions.signals}
+                  onCheckedChange={(checked) =>
+                    setSyncOptions({ ...syncOptions, signals: !!checked })
+                  }
+                />
+                <Label htmlFor="sync-signals" className="flex items-center gap-2 cursor-pointer">
+                  <Radio className="h-4 w-4 text-purple-500" />
+                  Signals
+                </Label>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button size="sm" onClick={handleSaveSyncOptions}>
+                Gem indstillinger
+              </Button>
+            </div>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -233,6 +398,38 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
           </div>
         </Card>
       </div>
+
+      {/* Additional stats for reports and signals */}
+      {(reports && reports.length > 0) || (signals && signals.length > 0) ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {reports && reports.length > 0 && (
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Rapporter</p>
+                  <p className="text-2xl font-bold text-foreground">{reports.length}</p>
+                </div>
+              </div>
+            </Card>
+          )}
+          {signals && signals.length > 0 && (
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
+                  <Radio className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Signals</p>
+                  <p className="text-2xl font-bold text-foreground">{signals.length}</p>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      ) : null}
 
       {/* Trend chart */}
       {chartData.length > 1 && (
@@ -295,6 +492,34 @@ export const HuntressDashboard = ({ integrationId, customerId }: HuntressDashboa
                 <span className="text-xs text-muted-foreground">
                   {incident.detected_at
                     ? format(new Date(incident.detected_at), "d. MMM yyyy HH:mm", { locale: da })
+                    : "Ukendt"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Recent signals */}
+      {signals && signals.length > 0 && (
+        <Card className="p-4">
+          <h4 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+            <Radio className="h-4 w-4 text-purple-500" />
+            Seneste signals
+          </h4>
+          <div className="space-y-2">
+            {signals.slice(0, 5).map((signal) => (
+              <div
+                key={signal.id}
+                className="flex items-center justify-between rounded-lg border border-border p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline">{signal.signal_type || "Signal"}</Badge>
+                  <span className="text-sm font-medium text-foreground">{signal.hostname || "Ukendt"}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {signal.detected_at
+                    ? format(new Date(signal.detected_at), "d. MMM yyyy HH:mm", { locale: da })
                     : "Ukendt"}
                 </span>
               </div>

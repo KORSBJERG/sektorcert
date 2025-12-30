@@ -343,6 +343,7 @@ export type Database = {
           private_key: string
           public_key: string
           sync_error: string | null
+          sync_options: Json | null
           sync_status: string
           updated_at: string
         }
@@ -356,6 +357,7 @@ export type Database = {
           private_key: string
           public_key: string
           sync_error?: string | null
+          sync_options?: Json | null
           sync_status?: string
           updated_at?: string
         }
@@ -369,6 +371,7 @@ export type Database = {
           private_key?: string
           public_key?: string
           sync_error?: string | null
+          sync_options?: Json | null
           sync_status?: string
           updated_at?: string
         }
@@ -378,6 +381,88 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: true
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_reports: {
+        Row: {
+          created_at: string
+          generated_at: string | null
+          huntress_integration_id: string
+          huntress_report_id: string
+          id: string
+          raw_data: Json | null
+          report_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string | null
+          huntress_integration_id: string
+          huntress_report_id: string
+          id?: string
+          raw_data?: Json | null
+          report_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string | null
+          huntress_integration_id?: string
+          huntress_report_id?: string
+          id?: string
+          raw_data?: Json | null
+          report_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_reports_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_signals: {
+        Row: {
+          created_at: string
+          detected_at: string | null
+          hostname: string | null
+          huntress_integration_id: string
+          huntress_signal_id: string
+          id: string
+          raw_data: Json | null
+          signal_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string | null
+          hostname?: string | null
+          huntress_integration_id: string
+          huntress_signal_id: string
+          id?: string
+          raw_data?: Json | null
+          signal_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string | null
+          hostname?: string | null
+          huntress_integration_id?: string
+          huntress_signal_id?: string
+          id?: string
+          raw_data?: Json | null
+          signal_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_signals_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
             referencedColumns: ["id"]
           },
         ]
