@@ -18,6 +18,7 @@ import { Plus, Shield, FileText, Users, LogOut, BarChart3, ScrollText, Trash2 } 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import { HuntressBulkImport } from "@/components/HuntressBulkImport";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -113,6 +114,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <HuntressBulkImport onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
               <Link to="/analytics">
                 <Button variant="outline" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
