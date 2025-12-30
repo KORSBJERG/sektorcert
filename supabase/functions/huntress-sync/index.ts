@@ -14,6 +14,15 @@ interface HuntressAgent {
   };
   external_ip: string;
   last_seen_at: string;
+  last_survey_at?: string;
+  agent_version?: string;
+  domain?: string;
+  account?: {
+    name: string;
+  };
+  organization?: {
+    name: string;
+  };
   platform?: string;
   antivirus_installed?: boolean;
 }
@@ -25,6 +34,10 @@ interface HuntressIncident {
   status: string;
   created_at: string;
   remediation_status?: string;
+  affected_hosts?: string[];
+  remediation_steps?: string;
+  indicators?: Record<string, unknown>;
+  timeline?: Record<string, unknown>[];
 }
 
 interface HuntressReport {
@@ -40,11 +53,41 @@ interface HuntressSignal {
   detected_at: string;
 }
 
+interface HuntressEscalation {
+  id: string;
+  title: string;
+  status: string;
+  severity: string;
+  affected_host?: string;
+  created_at: string;
+}
+
+interface HuntressBilling {
+  id: string;
+  period_start: string;
+  period_end: string;
+  endpoints_count: number;
+  total_amount: number;
+  currency: string;
+}
+
+interface HuntressSummaryReport {
+  id: string;
+  report_period: string;
+  report_type: string;
+  summary_data: Record<string, unknown>;
+  pdf_url?: string;
+  generated_at: string;
+}
+
 interface SyncOptions {
   incidents: boolean;
   agents: boolean;
   reports: boolean;
   signals: boolean;
+  escalations: boolean;
+  billing: boolean;
+  summaries: boolean;
 }
 
 serve(async (req) => {
@@ -84,11 +127,20 @@ serve(async (req) => {
     }
 
     // Use sync options from request or from integration settings
-    const syncOptions: SyncOptions = requestSyncOptions || integration.sync_options || {
+    const defaultOptions: SyncOptions = {
       incidents: true,
       agents: true,
       reports: true,
       signals: true,
+      escalations: true,
+      billing: false,
+      summaries: true,
+    };
+    
+    const storedOptions = integration.sync_options as Record<string, boolean> | null;
+    const syncOptions: SyncOptions = requestSyncOptions || {
+      ...defaultOptions,
+      ...storedOptions,
     };
 
     console.log("Sync options:", syncOptions);
@@ -110,6 +162,9 @@ serve(async (req) => {
     let agentsData: HuntressAgent[] = [];
     let reportsData: HuntressReport[] = [];
     let signalsData: HuntressSignal[] = [];
+    let escalationsData: HuntressEscalation[] = [];
+    let billingData: HuntressBilling[] = [];
+    let summariesData: HuntressSummaryReport[] = [];
     let syncErrors: string[] = [];
 
     const baseUrl = "https://api.huntress.io/v1";
@@ -135,9 +190,10 @@ serve(async (req) => {
           console.error("Incidents fetch failed:", incidentsResponse.status, errorText);
           syncErrors.push(`Incidents: ${incidentsResponse.status}`);
         }
-      } catch (e: any) {
-        console.error("Error fetching incidents:", e);
-        syncErrors.push(`Incidents: ${e?.message || "Unknown error"}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching incidents:", error);
+        syncErrors.push(`Incidents: ${error?.message || "Unknown error"}`);
       }
     }
 
@@ -161,9 +217,10 @@ serve(async (req) => {
           console.error("Agents fetch failed:", agentsResponse.status, errorText);
           syncErrors.push(`Agents: ${agentsResponse.status}`);
         }
-      } catch (e: any) {
-        console.error("Error fetching agents:", e);
-        syncErrors.push(`Agents: ${e?.message || "Unknown error"}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching agents:", error);
+        syncErrors.push(`Agents: ${error?.message || "Unknown error"}`);
       }
     }
 
@@ -185,14 +242,14 @@ serve(async (req) => {
         } else {
           const errorText = await reportsResponse.text();
           console.error("Reports fetch failed:", reportsResponse.status, errorText);
-          // Don't add error for 404 - endpoint might not be available
           if (reportsResponse.status !== 404) {
             syncErrors.push(`Reports: ${reportsResponse.status}`);
           }
         }
-      } catch (e: any) {
-        console.error("Error fetching reports:", e);
-        syncErrors.push(`Reports: ${e?.message || "Unknown error"}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching reports:", error);
+        syncErrors.push(`Reports: ${error?.message || "Unknown error"}`);
       }
     }
 
@@ -214,18 +271,103 @@ serve(async (req) => {
         } else {
           const errorText = await signalsResponse.text();
           console.error("Signals fetch failed:", signalsResponse.status, errorText);
-          // Don't add error for 404 - endpoint might not be available
           if (signalsResponse.status !== 404) {
             syncErrors.push(`Signals: ${signalsResponse.status}`);
           }
         }
-      } catch (e: any) {
-        console.error("Error fetching signals:", e);
-        syncErrors.push(`Signals: ${e?.message || "Unknown error"}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching signals:", error);
+        syncErrors.push(`Signals: ${error?.message || "Unknown error"}`);
       }
     }
 
-    // Store incidents
+    // Fetch escalations
+    if (syncOptions.escalations) {
+      try {
+        console.log("Fetching escalations from Huntress API...");
+        const escalationsUrl = orgFilter 
+          ? `${baseUrl}/escalations?${orgFilter}`
+          : `${baseUrl}/escalations`;
+        
+        console.log("Escalations URL:", escalationsUrl);
+        const escalationsResponse = await fetch(escalationsUrl, { headers });
+        
+        if (escalationsResponse.ok) {
+          const escalationsJson = await escalationsResponse.json();
+          escalationsData = escalationsJson.escalations || escalationsJson.data || [];
+          console.log(`Fetched ${escalationsData.length} escalations`);
+        } else {
+          const errorText = await escalationsResponse.text();
+          console.error("Escalations fetch failed:", escalationsResponse.status, errorText);
+          if (escalationsResponse.status !== 404) {
+            syncErrors.push(`Escalations: ${escalationsResponse.status}`);
+          }
+        }
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching escalations:", error);
+        syncErrors.push(`Escalations: ${error?.message || "Unknown error"}`);
+      }
+    }
+
+    // Fetch billing (if enabled - usually requires special permissions)
+    if (syncOptions.billing) {
+      try {
+        console.log("Fetching billing from Huntress API...");
+        const billingUrl = `${baseUrl}/billing_reports`;
+        
+        console.log("Billing URL:", billingUrl);
+        const billingResponse = await fetch(billingUrl, { headers });
+        
+        if (billingResponse.ok) {
+          const billingJson = await billingResponse.json();
+          billingData = billingJson.billing_reports || billingJson.data || [];
+          console.log(`Fetched ${billingData.length} billing records`);
+        } else {
+          const errorText = await billingResponse.text();
+          console.error("Billing fetch failed:", billingResponse.status, errorText);
+          if (billingResponse.status !== 404 && billingResponse.status !== 403) {
+            syncErrors.push(`Billing: ${billingResponse.status}`);
+          }
+        }
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching billing:", error);
+        syncErrors.push(`Billing: ${error?.message || "Unknown error"}`);
+      }
+    }
+
+    // Fetch summary reports
+    if (syncOptions.summaries) {
+      try {
+        console.log("Fetching summary reports from Huntress API...");
+        const summariesUrl = orgFilter 
+          ? `${baseUrl}/summary_reports?${orgFilter}`
+          : `${baseUrl}/summary_reports`;
+        
+        console.log("Summaries URL:", summariesUrl);
+        const summariesResponse = await fetch(summariesUrl, { headers });
+        
+        if (summariesResponse.ok) {
+          const summariesJson = await summariesResponse.json();
+          summariesData = summariesJson.summary_reports || summariesJson.data || [];
+          console.log(`Fetched ${summariesData.length} summary reports`);
+        } else {
+          const errorText = await summariesResponse.text();
+          console.error("Summaries fetch failed:", summariesResponse.status, errorText);
+          if (summariesResponse.status !== 404) {
+            syncErrors.push(`Summaries: ${summariesResponse.status}`);
+          }
+        }
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error("Error fetching summaries:", error);
+        syncErrors.push(`Summaries: ${error?.message || "Unknown error"}`);
+      }
+    }
+
+    // Store incidents with extended fields
     if (syncOptions.incidents && incidentsData.length > 0) {
       console.log("Storing incidents...");
       
@@ -242,6 +384,10 @@ serve(async (req) => {
         status: incident.status || "unknown",
         detected_at: incident.created_at || new Date().toISOString(),
         remediation_status: incident.remediation_status,
+        affected_hosts: incident.affected_hosts || [],
+        remediation_steps: incident.remediation_steps,
+        indicators: incident.indicators,
+        timeline: incident.timeline,
         raw_data: incident,
       }));
 
@@ -255,7 +401,7 @@ serve(async (req) => {
       }
     }
 
-    // Store agents
+    // Store agents with extended fields
     if (syncOptions.agents && agentsData.length > 0) {
       console.log("Storing agents...");
       
@@ -272,6 +418,11 @@ serve(async (req) => {
         defender_status: agent.antivirus_installed ? "enabled" : "disabled",
         external_ip: agent.external_ip,
         last_seen_at: agent.last_seen_at,
+        last_survey_at: agent.last_survey_at,
+        agent_version: agent.agent_version,
+        domain: agent.domain,
+        account_name: agent.account?.name,
+        organization_name: agent.organization?.name,
         raw_data: agent,
       }));
 
@@ -340,6 +491,95 @@ serve(async (req) => {
       }
     }
 
+    // Store escalations
+    if (syncOptions.escalations && escalationsData.length > 0) {
+      console.log("Storing escalations...");
+      
+      await supabase
+        .from("huntress_escalations")
+        .delete()
+        .eq("huntress_integration_id", integrationId);
+
+      const escalationsToInsert = escalationsData.map((escalation: HuntressEscalation) => ({
+        huntress_integration_id: integrationId,
+        huntress_escalation_id: String(escalation.id),
+        title: escalation.title || "Unknown",
+        status: escalation.status,
+        severity: escalation.severity,
+        affected_host: escalation.affected_host,
+        detected_at: escalation.created_at,
+        raw_data: escalation,
+      }));
+
+      const { error: insertEscalationsError } = await supabase
+        .from("huntress_escalations")
+        .insert(escalationsToInsert);
+
+      if (insertEscalationsError) {
+        console.error("Error inserting escalations:", insertEscalationsError);
+        syncErrors.push(`Insert escalations: ${insertEscalationsError.message}`);
+      }
+    }
+
+    // Store billing
+    if (syncOptions.billing && billingData.length > 0) {
+      console.log("Storing billing...");
+      
+      await supabase
+        .from("huntress_billing")
+        .delete()
+        .eq("huntress_integration_id", integrationId);
+
+      const billingToInsert = billingData.map((billing: HuntressBilling) => ({
+        huntress_integration_id: integrationId,
+        period_start: billing.period_start,
+        period_end: billing.period_end,
+        endpoints_count: billing.endpoints_count,
+        total_amount: billing.total_amount,
+        currency: billing.currency || "USD",
+        raw_data: billing,
+      }));
+
+      const { error: insertBillingError } = await supabase
+        .from("huntress_billing")
+        .insert(billingToInsert);
+
+      if (insertBillingError) {
+        console.error("Error inserting billing:", insertBillingError);
+        syncErrors.push(`Insert billing: ${insertBillingError.message}`);
+      }
+    }
+
+    // Store summary reports
+    if (syncOptions.summaries && summariesData.length > 0) {
+      console.log("Storing summary reports...");
+      
+      await supabase
+        .from("huntress_summary_reports")
+        .delete()
+        .eq("huntress_integration_id", integrationId);
+
+      const summariesToInsert = summariesData.map((summary: HuntressSummaryReport) => ({
+        huntress_integration_id: integrationId,
+        huntress_report_id: String(summary.id),
+        report_period: summary.report_period,
+        report_type: summary.report_type,
+        summary_data: summary.summary_data,
+        pdf_url: summary.pdf_url,
+        generated_at: summary.generated_at,
+        raw_data: summary,
+      }));
+
+      const { error: insertSummariesError } = await supabase
+        .from("huntress_summary_reports")
+        .insert(summariesToInsert);
+
+      if (insertSummariesError) {
+        console.error("Error inserting summaries:", insertSummariesError);
+        syncErrors.push(`Insert summaries: ${insertSummariesError.message}`);
+      }
+    }
+
     // Calculate sync summary
     const criticalIncidents = incidentsData.filter((i: HuntressIncident) => 
       i.severity?.toLowerCase() === "critical"
@@ -400,16 +640,20 @@ serve(async (req) => {
         agents_count: agentsData.length,
         reports_count: reportsData.length,
         signals_count: signalsData.length,
+        escalations_count: escalationsData.length,
+        billing_count: billingData.length,
+        summaries_count: summariesData.length,
         critical_incidents: criticalIncidents,
         high_incidents: highIncidents,
         errors: syncErrors.length > 0 ? syncErrors : undefined,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
-    console.error("Huntress sync error:", error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Huntress sync error:", err);
     return new Response(
-      JSON.stringify({ error: error?.message || "Unknown error" }),
+      JSON.stringify({ error: err?.message || "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

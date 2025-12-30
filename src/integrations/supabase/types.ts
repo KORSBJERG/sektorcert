@@ -315,40 +315,55 @@ export type Database = {
       }
       huntress_agents: {
         Row: {
+          account_name: string | null
+          agent_version: string | null
           created_at: string
           defender_status: string | null
+          domain: string | null
           external_ip: string | null
           hostname: string | null
           huntress_agent_id: string
           huntress_integration_id: string
           id: string
           last_seen_at: string | null
+          last_survey_at: string | null
+          organization_name: string | null
           os_version: string | null
           raw_data: Json | null
           updated_at: string
         }
         Insert: {
+          account_name?: string | null
+          agent_version?: string | null
           created_at?: string
           defender_status?: string | null
+          domain?: string | null
           external_ip?: string | null
           hostname?: string | null
           huntress_agent_id: string
           huntress_integration_id: string
           id?: string
           last_seen_at?: string | null
+          last_survey_at?: string | null
+          organization_name?: string | null
           os_version?: string | null
           raw_data?: Json | null
           updated_at?: string
         }
         Update: {
+          account_name?: string | null
+          agent_version?: string | null
           created_at?: string
           defender_status?: string | null
+          domain?: string | null
           external_ip?: string | null
           hostname?: string | null
           huntress_agent_id?: string
           huntress_integration_id?: string
           id?: string
           last_seen_at?: string | null
+          last_survey_at?: string | null
+          organization_name?: string | null
           os_version?: string | null
           raw_data?: Json | null
           updated_at?: string
@@ -363,41 +378,144 @@ export type Database = {
           },
         ]
       }
+      huntress_billing: {
+        Row: {
+          created_at: string
+          currency: string | null
+          endpoints_count: number | null
+          huntress_integration_id: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          raw_data: Json | null
+          total_amount: number | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          endpoints_count?: number | null
+          huntress_integration_id: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          raw_data?: Json | null
+          total_amount?: number | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          endpoints_count?: number | null
+          huntress_integration_id?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          raw_data?: Json | null
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_billing_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_escalations: {
+        Row: {
+          affected_host: string | null
+          created_at: string
+          detected_at: string | null
+          huntress_escalation_id: string
+          huntress_integration_id: string
+          id: string
+          raw_data: Json | null
+          severity: string | null
+          status: string | null
+          title: string
+        }
+        Insert: {
+          affected_host?: string | null
+          created_at?: string
+          detected_at?: string | null
+          huntress_escalation_id: string
+          huntress_integration_id: string
+          id?: string
+          raw_data?: Json | null
+          severity?: string | null
+          status?: string | null
+          title: string
+        }
+        Update: {
+          affected_host?: string | null
+          created_at?: string
+          detected_at?: string | null
+          huntress_escalation_id?: string
+          huntress_integration_id?: string
+          id?: string
+          raw_data?: Json | null
+          severity?: string | null
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_escalations_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       huntress_incidents: {
         Row: {
+          affected_hosts: string[] | null
           created_at: string
           detected_at: string | null
           huntress_incident_id: string
           huntress_integration_id: string
           id: string
+          indicators: Json | null
           raw_data: Json | null
           remediation_status: string | null
+          remediation_steps: string | null
           severity: string
           status: string
+          timeline: Json | null
           title: string
         }
         Insert: {
+          affected_hosts?: string[] | null
           created_at?: string
           detected_at?: string | null
           huntress_incident_id: string
           huntress_integration_id: string
           id?: string
+          indicators?: Json | null
           raw_data?: Json | null
           remediation_status?: string | null
+          remediation_steps?: string | null
           severity: string
           status: string
+          timeline?: Json | null
           title: string
         }
         Update: {
+          affected_hosts?: string[] | null
           created_at?: string
           detected_at?: string | null
           huntress_incident_id?: string
           huntress_integration_id?: string
           id?: string
+          indicators?: Json | null
           raw_data?: Json | null
           remediation_status?: string | null
+          remediation_steps?: string | null
           severity?: string
           status?: string
+          timeline?: Json | null
           title?: string
         }
         Relationships: [
@@ -538,6 +656,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "huntress_signals_huntress_integration_id_fkey"
+            columns: ["huntress_integration_id"]
+            isOneToOne: false
+            referencedRelation: "huntress_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      huntress_summary_reports: {
+        Row: {
+          created_at: string
+          generated_at: string | null
+          huntress_integration_id: string
+          huntress_report_id: string
+          id: string
+          pdf_url: string | null
+          raw_data: Json | null
+          report_period: string | null
+          report_type: string | null
+          summary_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string | null
+          huntress_integration_id: string
+          huntress_report_id: string
+          id?: string
+          pdf_url?: string | null
+          raw_data?: Json | null
+          report_period?: string | null
+          report_type?: string | null
+          summary_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string | null
+          huntress_integration_id?: string
+          huntress_report_id?: string
+          id?: string
+          pdf_url?: string | null
+          raw_data?: Json | null
+          report_period?: string | null
+          report_type?: string | null
+          summary_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huntress_summary_reports_huntress_integration_id_fkey"
             columns: ["huntress_integration_id"]
             isOneToOne: false
             referencedRelation: "huntress_integrations"
