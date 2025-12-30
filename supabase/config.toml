@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.analyze-huntress-data]
 verify_jwt = true
+
+[functions.cvr-lookup]
+verify_jwt = true

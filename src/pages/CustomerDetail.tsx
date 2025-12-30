@@ -26,6 +26,7 @@ import { SecurityReportsComparison } from "@/components/SecurityReportsCompariso
 import { HuntressSetup } from "@/components/HuntressSetup";
 import { HuntressDashboard } from "@/components/HuntressDashboard";
 import { HuntressMatches } from "@/components/HuntressMatches";
+import { CustomerContactInfo } from "@/components/CustomerContactInfo";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -197,25 +198,12 @@ const CustomerDetail = () => {
       <main className="container mx-auto px-4 py-8">
         <Card className="mb-6 p-6 shadow-elevated">
           <h1 className="mb-4 text-2xl font-bold text-foreground">{customer.name}</h1>
-          <div className="grid gap-4 text-sm md:grid-cols-2">
-            <div>
-              <p className="font-medium text-muted-foreground">Adresse</p>
-              <p className="text-foreground">{customer.address || "Ikke angivet"}</p>
-            </div>
-            <div>
-              <p className="font-medium text-muted-foreground">Driftstype</p>
-              <p className="text-foreground">{customer.operation_type}</p>
-            </div>
-            <div>
-              <p className="font-medium text-muted-foreground">Kontaktperson</p>
-              <p className="text-foreground">{customer.contact_person || "Ikke angivet"}</p>
-            </div>
-            <div>
-              <p className="font-medium text-muted-foreground">Email</p>
-              <p className="text-foreground">{customer.contact_email || "Ikke angivet"}</p>
-            </div>
-          </div>
         </Card>
+
+        {/* Contact Info with CVR Lookup */}
+        <div className="mb-6">
+          <CustomerContactInfo customer={customer} />
+        </div>
 
         {/* Huntress Integration Section */}
         <Card className="mb-6 p-6 shadow-elevated">
