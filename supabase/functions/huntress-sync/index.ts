@@ -69,9 +69,9 @@ serve(async (req) => {
       .update({ sync_status: "syncing", sync_error: null })
       .eq("id", integrationId);
 
-    const authHeader = btoa(`${integration.public_key}:${integration.private_key}`);
+    // Use Bearer token (API Key stored in public_key field)
     const headers = {
-      "Authorization": `Basic ${authHeader}`,
+      "Authorization": `Bearer ${integration.public_key}`,
       "Content-Type": "application/json",
     };
 
