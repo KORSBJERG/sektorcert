@@ -57,21 +57,26 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
-      <Card className="w-full max-w-md p-8 shadow-elevated">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary">
-            <Shield className="h-8 w-8 text-white" />
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-gradient-hero" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+      
+      <Card className="relative w-full max-w-md p-8 border-border/50 bg-card/95 backdrop-blur-sm shadow-elevated">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
+            <Shield className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-foreground">Peaknet</h1>
-          <p className="text-sm text-muted-foreground">
-            {isSignUp ? "Opret konto" : "Log ind på dit system"}
+          <h1 className="mb-2 text-3xl font-bold text-foreground tracking-tight">PEAKNET</h1>
+          <p className="text-muted-foreground">
+            {isSignUp ? "Opret din konto" : "Log ind for at fortsætte"}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-foreground">Email</Label>
             <Input
               id="email"
               type="email"
@@ -79,11 +84,12 @@ const Auth = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="din@email.dk"
+              className="bg-secondary/50 border-border focus:border-primary"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-foreground">Password</Label>
             <Input
               id="password"
               type="password"
@@ -92,26 +98,36 @@ const Auth = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               minLength={6}
+              className="bg-secondary/50 border-border focus:border-primary"
             />
           </div>
 
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-primary hover:opacity-90"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
           >
             {loading ? "Behandler..." : isSignUp ? "Opret konto" : "Log ind"}
           </Button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-6 text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors"
           >
-            {isSignUp ? "Har du allerede en konto? Log ind" : "Har du ikke en konto? Opret en"}
+            {isSignUp ? "Har du allerede en konto? " : "Har du ikke en konto? "}
+            <span className="text-primary font-medium">
+              {isSignUp ? "Log ind" : "Opret en"}
+            </span>
           </button>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-xs text-muted-foreground">
+            Enterprise-grade cybersikkerhed for alle virksomheder
+          </p>
         </div>
       </Card>
     </div>
