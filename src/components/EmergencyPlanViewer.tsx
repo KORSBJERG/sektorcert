@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Shield, Phone, Calendar, AlertTriangle, Edit, Download, Check, X } from "lucide-react";
+import { FileText, Shield, Phone, Calendar, AlertTriangle, Edit, Download, Check, X, FileDown, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface SecurityMeasure {
@@ -16,55 +19,71 @@ interface SecurityMeasure {
 interface EmergencyPlanViewerProps {
   plan: Tables<"emergency_plans">;
   customerName: string;
+  customerLogo?: string;
   onEdit: () => void;
 }
 
-export function EmergencyPlanViewer({ plan, customerName, onEdit }: EmergencyPlanViewerProps) {
+export function EmergencyPlanViewer({ plan, customerName, customerLogo, onEdit }: EmergencyPlanViewerProps) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const { toast } = useToast();
   const measures = (plan.security_measures as unknown as SecurityMeasure[]) || [];
-  const enabledMeasures = measures.filter(m => m.enabled);
 
-  const handleDownload = () => {
-    // Generate a simple text/markdown version for download
-    const content = `
-# ${plan.title}
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-emergency-plan-pdf', {
+        body: {
+          plan: {
+            title: plan.title,
+            version: plan.version,
+            status: plan.status,
+            it_contact_company: plan.it_contact_company,
+            it_contact_name: plan.it_contact_name,
+            it_contact_phone: plan.it_contact_phone,
+            it_contact_email: plan.it_contact_email,
+            security_measures: measures,
+            last_reviewed_at: plan.last_reviewed_at,
+            last_reviewed_by: plan.last_reviewed_by,
+            next_review_at: plan.next_review_at,
+            additional_notes: plan.additional_notes,
+            created_at: plan.created_at,
+            updated_at: plan.updated_at,
+          },
+          customerName,
+          customerLogo,
+        },
+      });
 
-Ved cyberkriminalitet hos ${customerName} følges denne Incident Response plan:
+      if (error) throw error;
 
-## AKUT ALARM
+      // Open in new window for printing as PDF
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(data);
+        printWindow.document.close();
+        
+        // Wait for content to load then trigger print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        };
+      }
 
-Kontakt ${plan.it_contact_company || "IT-firma"} ved ${plan.it_contact_name || "IT-kontakt"} på tlf.: ${plan.it_contact_phone || "N/A"}
-${plan.it_contact_email ? `Email: ${plan.it_contact_email}` : ""}
-
-## FOREBYGGENDE TILTAG
-
-Vi gør følgende for at undgå cyberkriminalitet i hverdagen:
-
-${enabledMeasures.map(m => `• ${m.text}`).join("\n")}
-
-## GENNEMGANG
-
-Vi foretager gennemgang af denne plan og gennemgår ligeledes en awareness-træning af relevant personale en gang årligt.
-
-Denne plan er gennemgået sidst den: ${plan.last_reviewed_at ? format(new Date(plan.last_reviewed_at), "d/M-yyyy", { locale: da }) : "N/A"}
-${plan.last_reviewed_by ? `Gennemgået af: ${plan.last_reviewed_by}` : ""}
-
-${plan.additional_notes ? `\n## YDERLIGERE NOTER\n\n${plan.additional_notes}` : ""}
-
----
-Version: ${plan.version}
-Oprettet: ${format(new Date(plan.created_at), "d. MMMM yyyy", { locale: da })}
-Sidst opdateret: ${format(new Date(plan.updated_at), "d. MMMM yyyy", { locale: da })}
-    `.trim();
-
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `beredskabsplan-${customerName.toLowerCase().replace(/\s+/g, "-")}-v${plan.version}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      toast({
+        title: "PDF genereret",
+        description: "Brug browserens print-funktion for at gemme som PDF.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Fejl ved generering",
+        description: "Der opstod en fejl ved generering af PDF. Prøv igen.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -86,9 +105,17 @@ Sidst opdateret: ${format(new Date(plan.updated_at), "d. MMMM yyyy", { locale: d
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+          >
+            {isGeneratingPdf ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4 mr-2" />
+            )}
+            {isGeneratingPdf ? "Genererer..." : "Download PDF"}
           </Button>
           <Button onClick={onEdit}>
             <Edit className="h-4 w-4 mr-2" />

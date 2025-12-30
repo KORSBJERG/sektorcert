@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.cvr-lookup]
 verify_jwt = true
+
+[functions.generate-emergency-plan-pdf]
+verify_jwt = true
