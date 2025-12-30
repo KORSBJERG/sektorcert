@@ -76,17 +76,14 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
 
     setFetching(true);
     try {
-      const response = await fetch("https://api.huntress.io/v1/organizations", {
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-        },
+      const { data, error } = await supabase.functions.invoke("huntress-organizations", {
+        body: { apiKey },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const data = await response.json();
       const orgs = data.organizations || data.data || [];
       setOrganizations(orgs);
       setSelectedOrgs(orgs.map((o: HuntressOrganization) => o.id));
@@ -95,10 +92,11 @@ export const HuntressBulkImport = ({ onImportComplete }: HuntressBulkImportProps
         title: "Organisationer hentet",
         description: `Fandt ${orgs.length} organisationer`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
       toast({
         title: "Fejl",
-        description: "Kunne ikke hente organisationer. Tjek dine credentials.",
+        description: `Kunne ikke hente organisationer: ${message}`,
         variant: "destructive",
       });
     } finally {
