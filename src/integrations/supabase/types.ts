@@ -235,6 +235,84 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_plans: {
+        Row: {
+          additional_notes: string | null
+          created_at: string
+          created_by_user_id: string
+          customer_id: string
+          id: string
+          it_contact_company: string | null
+          it_contact_email: string | null
+          it_contact_name: string | null
+          it_contact_phone: string | null
+          last_reviewed_at: string | null
+          last_reviewed_by: string | null
+          next_review_at: string | null
+          parent_plan_id: string | null
+          security_measures: Json | null
+          status: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          additional_notes?: string | null
+          created_at?: string
+          created_by_user_id: string
+          customer_id: string
+          id?: string
+          it_contact_company?: string | null
+          it_contact_email?: string | null
+          it_contact_name?: string | null
+          it_contact_phone?: string | null
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          next_review_at?: string | null
+          parent_plan_id?: string | null
+          security_measures?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          additional_notes?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          customer_id?: string
+          id?: string
+          it_contact_company?: string | null
+          it_contact_email?: string | null
+          it_contact_name?: string | null
+          it_contact_phone?: string | null
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          next_review_at?: string | null
+          parent_plan_id?: string | null
+          security_measures?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_plans_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emergency_plans_parent_plan_id_fkey"
+            columns: ["parent_plan_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       huntress_agents: {
         Row: {
           created_at: string

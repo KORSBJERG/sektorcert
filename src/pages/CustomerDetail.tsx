@@ -27,6 +27,7 @@ import { HuntressSetup } from "@/components/HuntressSetup";
 import { HuntressDashboard } from "@/components/HuntressDashboard";
 import { HuntressMatches } from "@/components/HuntressMatches";
 import { CustomerContactInfo } from "@/components/CustomerContactInfo";
+import { EmergencyPlanSection } from "@/components/EmergencyPlanSection";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -251,6 +252,11 @@ const CustomerDetail = () => {
             <SecurityReportsComparison customerId={id!} />
           </div>
           <SecurityReportsList customerId={id!} />
+        </Card>
+
+        {/* Emergency Plan Section */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <EmergencyPlanSection customerId={id!} customerName={customer.name} />
         </Card>
 
         <Card className="p-6 shadow-elevated">
