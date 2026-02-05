@@ -68,7 +68,7 @@ const Auth = () => {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
             <Shield className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-foreground tracking-tight">PEAKNET</h1>
+          <h1 className="mb-2 text-3xl font-bold text-foreground tracking-tight">PEAKNET & DSData</h1>
           <p className="text-muted-foreground">
             {isSignUp ? "Opret din konto" : "Log ind for at fortsætte"}
           </p>
@@ -126,7 +126,7 @@ const Auth = () => {
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-xs text-muted-foreground">
-            Enterprise-grade cybersikkerhed for alle virksomheder
+            Enterprise-grade cybersikkerhed af PEAKNET & DSData
           </p>
         </div>
       </Card>
