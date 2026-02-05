@@ -1,20 +1,24 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Download, Loader2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AssessmentVersionHistory } from "@/components/AssessmentVersionHistory";
 
 const AssessmentReport = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [generating, setGenerating] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
+  const [selectedConsultant, setSelectedConsultant] = useState<string>("");
 
   const { data: assessment, isLoading } = useQuery({
     queryKey: ["assessment", id],
@@ -41,6 +45,46 @@ const AssessmentReport = () => {
       return data;
     },
   });
+
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .order("display_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (assessment?.consultant_name) {
+      setSelectedConsultant(assessment.consultant_name);
+    }
+  }, [assessment?.consultant_name]);
+
+  const updateConsultantMutation = useMutation({
+    mutationFn: async (consultantName: string) => {
+      const { error } = await supabase
+        .from("assessments")
+        .update({ consultant_name: consultantName })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assessment", id] });
+      toast.success("Konsulent opdateret");
+    },
+    onError: () => {
+      toast.error("Kunne ikke opdatere konsulent");
+    },
+  });
+
+  const handleConsultantChange = (value: string) => {
+    setSelectedConsultant(value);
+    updateConsultantMutation.mutate(value);
+  };
 
   const handleCreateNewVersion = async () => {
     if (!assessment || !assessmentItems) return;
@@ -239,7 +283,29 @@ const AssessmentReport = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Konsulent</p>
-              <p className="text-foreground">{assessment.consultant_name}</p>
+              <Select value={selectedConsultant} onValueChange={handleConsultantChange}>
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder="Vælg konsulent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((profile) => (
+                    <SelectItem 
+                      key={profile.id} 
+                      value={profile.display_name || profile.email || profile.id}
+                    >
+                      {profile.display_name || profile.email || "Ukendt"}
+                    </SelectItem>
+                  ))}
+                  {/* Include current value if not in profiles */}
+                  {selectedConsultant && !profiles?.some(p => 
+                    (p.display_name || p.email || p.id) === selectedConsultant
+                  ) && (
+                    <SelectItem value={selectedConsultant}>
+                      {selectedConsultant}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Adresse</p>
@@ -248,24 +314,6 @@ const AssessmentReport = () => {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Driftstype</p>
               <p className="text-foreground">{assessment.customers?.operation_type}</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-gradient-primary p-8 text-center text-white">
-            <h3 className="mb-2 text-lg opacity-90">Samlet Modenhedsscore</h3>
-            <p className="mb-2 text-6xl font-bold">
-              {assessment.overall_maturity_score?.toFixed(2) || "0.00"}
-              <span className="text-3xl">/4</span>
-            </p>
-            <p className="opacity-90">Baseret på {assessmentItems.length} anbefalinger</p>
-
-            <div className="mt-6 grid grid-cols-5 gap-2">
-              {scoreDistribution.map((count, level) => (
-                <div key={level} className="rounded-lg bg-white/20 p-3 backdrop-blur-sm">
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-xs">Niveau {level}</p>
-                </div>
-              ))}
             </div>
           </div>
         </Card>
