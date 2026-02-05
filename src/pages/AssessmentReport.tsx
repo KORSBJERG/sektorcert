@@ -124,7 +124,8 @@ const AssessmentReport = () => {
       if (itemsError) throw itemsError;
 
       toast.success(`Version ${newAssessment.version} oprettet!`);
-      navigate(`/assessment/${newAssessment.id}/wizard`);
+      // Wizard route is registered as /assessments/:id
+      navigate(`/assessments/${newAssessment.id}`);
     } catch (error) {
       console.error("Error creating new version:", error);
       toast.error("Kunne ikke oprette ny version");

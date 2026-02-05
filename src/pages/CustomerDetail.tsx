@@ -187,7 +187,8 @@ const CustomerDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["customer-assessments", id] });
       
       // Navigate to the wizard to continue editing
-      navigate(`/assessment/${newAssessment.id}/wizard`);
+      // Note: Wizard route is registered as /assessments/:id
+      navigate(`/assessments/${newAssessment.id}`);
     } catch (error: any) {
       toast({
         title: "Fejl",

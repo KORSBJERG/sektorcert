@@ -94,7 +94,8 @@ const NewAssessment = () => {
       if (itemsError) throw itemsError;
 
       toast.success("Vurdering oprettet succesfuldt!");
-      navigate(`/assessment/${newAssessmentId}/wizard`);
+      // Wizard route is registered as /assessments/:id
+      navigate(`/assessments/${newAssessmentId}`);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.issues[0].message);
