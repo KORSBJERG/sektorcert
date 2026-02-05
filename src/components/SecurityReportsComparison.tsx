@@ -66,7 +66,7 @@ export function SecurityReportsComparison({ customerId }: SecurityReportsCompari
   const [selectedReports, setSelectedReports] = useState<string[]>([]);
 
   const { data: reports } = useQuery({
-    queryKey: ["security-reports", customerId],
+    queryKey: ["security-reports-completed", customerId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("security_reports")

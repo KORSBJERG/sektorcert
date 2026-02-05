@@ -248,7 +248,7 @@ export function SecurityReportsList({
     }
   };
 
-  const handleViewPdf = async (filePath: string) => {
+  const handleViewPdf = async (filePath: string, fileName: string) => {
     try {
       toast.info("Henter PDF...");
       
@@ -262,10 +262,18 @@ export function SecurityReportsList({
         // Create a blob URL and open it
         const blob = new Blob([data], { type: "application/pdf" });
         const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, "_blank");
+        
+        // Create download link to trigger direct download
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
         // Clean up blob URL after a delay
         setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        toast.success("PDF downloadet!");
       }
     } catch (error) {
       console.error("Error opening PDF:", error);
@@ -336,7 +344,7 @@ export function SecurityReportsList({
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  onClick={() => handleViewPdf(report.file_path)}
+                  onClick={() => handleViewPdf(report.file_path, report.file_name)}
                   title="Åbn PDF"
                 >
                   <Eye className="h-4 w-4" />
