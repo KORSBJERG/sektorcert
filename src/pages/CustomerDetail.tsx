@@ -378,7 +378,7 @@ const CustomerDetail = () => {
                               {creatingRevision === assessment.id ? "Opretter..." : "Ny Revision"}
                             </Button>
                             <Button
-                              onClick={() => navigate(`/assessments/${assessment.id}/report`)}
+                              onClick={() => navigate(`/assessment/${assessment.id}/report`)}
                               variant="outline"
                             >
                               PDF Rapport
