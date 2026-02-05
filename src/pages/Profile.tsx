@@ -24,6 +24,7 @@
    const [loading, setLoading] = useState(true);
    const [saving, setSaving] = useState(false);
    const [profile, setProfile] = useState<Profile | null>(null);
+  const [userEmail, setUserEmail] = useState("");
    const [displayName, setDisplayName] = useState("");
    const [phone, setPhone] = useState("");
  
@@ -36,6 +37,9 @@
            return;
          }
  
+        // Get email directly from auth session (always available)
+        setUserEmail(session.user.email || "");
+
          const { data, error } = await supabase
            .from("profiles")
            .select("*")
@@ -136,7 +140,7 @@
                  <Input
                    id="email"
                    type="email"
-                   value={profile?.email || ""}
+                    value={userEmail}
                    disabled
                    className="bg-muted/50"
                  />
