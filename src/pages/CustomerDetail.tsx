@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { useState } from "react";
@@ -34,6 +34,7 @@ const CustomerDetail = () => {
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+  const [creatingRevision, setCreatingRevision] = useState<string | null>(null);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ["customer", id],
@@ -102,6 +103,99 @@ const CustomerDetail = () => {
         description: "Der opstod en fejl ved sletning af vurderingen.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCreateRevision = async (sourceAssessmentId: string) => {
+    setCreatingRevision(sourceAssessmentId);
+    
+    try {
+      // Fetch the source assessment
+      const { data: sourceAssessment, error: assessmentError } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", sourceAssessmentId)
+        .single();
+      
+      if (assessmentError) throw assessmentError;
+      
+      // Determine the root parent (for version chain) and calculate new version
+      const rootParentId = sourceAssessment.parent_assessment_id || sourceAssessmentId;
+      
+      // Get highest version in the chain
+      const { data: versionData } = await supabase
+        .from("assessments")
+        .select("version")
+        .or(`id.eq.${rootParentId},parent_assessment_id.eq.${rootParentId}`)
+        .order("version", { ascending: false })
+        .limit(1);
+      
+      const newVersion = (versionData?.[0]?.version || sourceAssessment.version) + 1;
+      
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Ikke logget ind");
+      
+      // Create new assessment as a revision
+      const { data: newAssessment, error: createError } = await supabase
+        .from("assessments")
+        .insert({
+          customer_id: sourceAssessment.customer_id,
+          consultant_name: sourceAssessment.consultant_name,
+          assessment_date: new Date().toISOString().split("T")[0],
+          status: "in_progress",
+          version: newVersion,
+          parent_assessment_id: rootParentId,
+          created_by_user_id: user.id,
+        })
+        .select()
+        .single();
+      
+      if (createError) throw createError;
+      
+      // Fetch source assessment items
+      const { data: sourceItems, error: itemsError } = await supabase
+        .from("assessment_items")
+        .select("*")
+        .eq("assessment_id", sourceAssessmentId);
+      
+      if (itemsError) throw itemsError;
+      
+      // Copy all assessment items to the new assessment
+      if (sourceItems && sourceItems.length > 0) {
+        const newItems = sourceItems.map((item) => ({
+          assessment_id: newAssessment.id,
+          recommendation_id: item.recommendation_id,
+          maturity_level: item.maturity_level,
+          status: item.status,
+          notes: item.notes,
+          recommended_actions: item.recommended_actions,
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("assessment_items")
+          .insert(newItems);
+        
+        if (insertError) throw insertError;
+      }
+      
+      toast({
+        title: "Ny revision oprettet",
+        description: `Version ${newVersion} er oprettet baseret på den tidligere vurdering.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["customer-assessments", id] });
+      
+      // Navigate to the wizard to continue editing
+      navigate(`/assessment/${newAssessment.id}/wizard`);
+    } catch (error: any) {
+      toast({
+        title: "Fejl",
+        description: error.message || "Der opstod en fejl ved oprettelse af revision.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingRevision(null);
     }
   };
 
@@ -273,12 +367,23 @@ const CustomerDetail = () => {
                           {assessment.status === "completed" ? "Se rapport" : "Fortsæt vurdering"}
                         </Button>
                         {assessment.status === "completed" && (
-                          <Button
-                            onClick={() => navigate(`/assessments/${assessment.id}/report`)}
-                            variant="outline"
-                          >
-                            PDF Rapport
-                          </Button>
+                          <>
+                            <Button
+                              onClick={() => handleCreateRevision(assessment.id)}
+                              variant="outline"
+                              disabled={creatingRevision === assessment.id}
+                              className="gap-2"
+                            >
+                              <Copy className="h-4 w-4" />
+                              {creatingRevision === assessment.id ? "Opretter..." : "Ny Revision"}
+                            </Button>
+                            <Button
+                              onClick={() => navigate(`/assessments/${assessment.id}/report`)}
+                              variant="outline"
+                            >
+                              PDF Rapport
+                            </Button>
+                          </>
                         )}
                         <Button
                           onClick={() => {
