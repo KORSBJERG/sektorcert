@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
-import { Shield, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Shield, TrendingUp, AlertTriangle, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -153,7 +153,13 @@ const Analytics = () => {
     <div className="min-h-screen bg-gradient-hero pb-8">
       <header className="border-b border-border bg-card shadow-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Dashboard
+              </Button>
+            </Link>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
               <Shield className="h-6 w-6 text-white" />
             </div>
