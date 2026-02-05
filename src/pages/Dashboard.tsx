@@ -31,7 +31,6 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
-import { HuntressBulkImport } from "@/components/HuntressBulkImport";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -118,7 +117,7 @@ const Dashboard = () => {
       <div className="bg-primary/10 border-b border-primary/20 py-2">
         <div className="container mx-auto px-4">
           <p className="text-center text-sm text-primary">
-            Enterprise-grade cybersikkerhed for alle virksomheder
+            Enterprise-grade cybersikkerhed af PEAKNET & DSData
           </p>
         </div>
       </div>
@@ -131,7 +130,7 @@ const Dashboard = () => {
               <div className="flex h-10 w-10 items-center justify-center">
                 <Shield className="h-8 w-8 text-primary" />
               </div>
-              <span className="text-2xl font-bold text-foreground tracking-tight">PEAKNET</span>
+              <span className="text-2xl font-bold text-foreground tracking-tight">PEAKNET & DSData</span>
             </div>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -150,7 +149,6 @@ const Dashboard = () => {
             </nav>
 
             <div className="flex items-center gap-3">
-              <HuntressBulkImport onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
               <Link to="/customers/new">
                 <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                   <Plus className="h-4 w-4" />
@@ -405,7 +403,7 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-foreground">PEAKNET</span>
+              <span className="font-semibold text-foreground">PEAKNET & DSData</span>
               <span className="text-muted-foreground">• Cybersikkerhed Assessment Platform</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
