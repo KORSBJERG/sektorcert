@@ -50,10 +50,12 @@ interface SecurityReport {
   id: string;
   file_name: string;
   analysis_status: string;
+  report_type: string | null;
   secure_score_current: number | null;
   secure_score_predicted: number | null;
   overall_status_percentage: number | null;
   created_at: string;
+  file_path: string;
 }
 
 interface ReportMatch {
@@ -246,7 +248,28 @@ export function SecurityReportsList({
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const handleViewPdf = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("security-reports")
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+      }
+    } catch (error) {
+      console.error("Error opening PDF:", error);
+      toast.error("Kunne ikke åbne PDF");
+    }
+  };
+
+  const getStatusBadge = (status: string, reportType: string | null) => {
+    // External PDFs don't need analysis
+    if (reportType === "external_pdf") {
+      return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30"><FileText className="mr-1 h-3 w-3" />PDF</Badge>;
+    }
+    
     switch (status) {
       case "completed":
         return <Badge variant="default" className="bg-success"><CheckCircle2 className="mr-1 h-3 w-3" />Analyseret</Badge>;
@@ -292,7 +315,7 @@ export function SecurityReportsList({
             </div>
             
             <div className="flex items-center gap-2">
-              {getStatusBadge(report.analysis_status)}
+              {getStatusBadge(report.analysis_status, report.report_type)}
               
               {report.secure_score_current && (
                 <Badge variant="outline">
@@ -300,17 +323,27 @@ export function SecurityReportsList({
                 </Badge>
               )}
               
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setSelectedReport(report)}
-                    disabled={report.analysis_status !== "completed"}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
+              {report.report_type === "external_pdf" ? (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleViewPdf(report.file_path)}
+                  title="Åbn PDF"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setSelectedReport(report)}
+                      disabled={report.analysis_status !== "completed"}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Rapportanalyse: {report.file_name}</DialogTitle>
@@ -402,7 +435,8 @@ export function SecurityReportsList({
                       )}
                     </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
               
               <Button 
                 variant="ghost" 
