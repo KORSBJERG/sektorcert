@@ -312,10 +312,10 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
     </head>
     <body>
       <div class="header">
-        <div class="logo">🛡️ Peaknet</div>
+        <div class="logo">🛡️ PEAKNET & DSData</div>
         <div class="subtitle">Cybersikkerhedsvurdering</div>
         <h1 style="margin: 24px 0 8px 0; font-size: 32px;">${assessment.customers.name}</h1>
-        <p style="color: #64748b; margin: 0;">Baseret på Peaknets 25 anbefalinger</p>
+        <p style="color: #64748b; margin: 0;">Baseret på 25 sikkerhedsanbefalinger</p>
       </div>
 
       <div class="info-grid">
@@ -368,9 +368,9 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
       ${itemsHTML}
 
       <div class="footer">
-        <p style="margin: 8px 0;"><strong>Peaknet Cybersikkerhed Assessment</strong></p>
+        <p style="margin: 8px 0;"><strong>PEAKNET & DSData Cybersikkerhed Assessment</strong></p>
         <p style="margin: 8px 0;">Genereret ${new Date().toLocaleDateString("da-DK", { year: "numeric", month: "long", day: "numeric" })}</p>
-        <p style="margin: 8px 0;">Dette dokument indeholder en vurdering af cybersikkerhed baseret på Peaknets 25 anbefalinger.</p>
+        <p style="margin: 8px 0;">Dette dokument indeholder en vurdering af cybersikkerhed baseret på 25 sikkerhedsanbefalinger.</p>
       </div>
     </body>
     </html>
