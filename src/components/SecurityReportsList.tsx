@@ -250,13 +250,22 @@ export function SecurityReportsList({
 
   const handleViewPdf = async (filePath: string) => {
     try {
+      toast.info("Henter PDF...");
+      
+      // Download the file as blob to avoid browser blocking
       const { data, error } = await supabase.storage
         .from("security-reports")
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
+        .download(filePath);
 
       if (error) throw error;
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank");
+      if (data) {
+        // Create a blob URL and open it
+        const blob = new Blob([data], { type: "application/pdf" });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+        
+        // Clean up blob URL after a delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       }
     } catch (error) {
       console.error("Error opening PDF:", error);
