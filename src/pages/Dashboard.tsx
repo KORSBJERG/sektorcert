@@ -18,7 +18,6 @@ import {
   Shield, 
   FileText, 
   Users, 
-  LogOut, 
   BarChart3, 
   ScrollText, 
   Trash2,
@@ -31,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+ import UserMenu from "@/components/UserMenu";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -39,12 +39,6 @@ const Dashboard = () => {
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
   const [customerDeleteDialogOpen, setCustomerDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
-  
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logget ud");
-    navigate("/auth");
-  };
 
   const handleDeleteAssessment = async () => {
     if (!assessmentToDelete) return;
@@ -155,9 +149,7 @@ const Dashboard = () => {
                   Ny Kunde
                 </Button>
               </Link>
-              <Button variant="ghost" onClick={handleLogout} size="icon">
-                <LogOut className="h-4 w-4 text-muted-foreground" />
-              </Button>
+               <UserMenu />
             </div>
           </div>
         </div>

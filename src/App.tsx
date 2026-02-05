@@ -13,6 +13,7 @@ import AssessmentReport from "./pages/AssessmentReport";
 import Analytics from "./pages/Analytics";
 import AuditLogs from "./pages/AuditLogs";
 import Auth from "./pages/Auth";
+ import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,14 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+           <Route
+             path="/profile"
+             element={
+               <ProtectedRoute>
+                 <Profile />
+               </ProtectedRoute>
+             }
+           />
           <Route
             path="/customers"
             element={
