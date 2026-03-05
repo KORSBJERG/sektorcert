@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileUp, Globe } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileUp, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -32,10 +32,11 @@ export function SecurityReportUpload({
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"csv" | "pdf" | "dns">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "pdf" | "dns" | "huntress">("csv");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const dnsInputRef = useRef<HTMLInputElement>(null);
+  const huntressInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const handleCsvSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,6 +282,93 @@ export function SecurityReportUpload({
     if (dnsInputRef.current) dnsInputRef.current.value = "";
   };
 
+  const handleHuntressSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Kun PDF-filer er understøttet for Huntress-rapporter");
+      return;
+    }
+
+    setStatus("uploading");
+    setProgress(10);
+    setErrorMessage("");
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Bruger ikke logget ind");
+
+      // Read as base64
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const pdfBase64 = btoa(binary);
+      setProgress(20);
+
+      // Upload to storage
+      const filePath = `${user.id}/${customerId}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("security-reports")
+        .upload(filePath, file, { contentType: "application/pdf" });
+
+      if (uploadError) throw uploadError;
+      setProgress(40);
+
+      const { data: report, error: reportError } = await supabase
+        .from("security_reports")
+        .insert({
+          customer_id: customerId,
+          created_by_user_id: user.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          analysis_status: "analyzing",
+          report_type: "huntress_threat",
+        })
+        .select()
+        .single();
+
+      if (reportError) throw reportError;
+      setProgress(50);
+
+      setStatus("analyzing");
+
+      const { data: analysisData, error: analysisError } = await supabase.functions
+        .invoke("analyze-huntress-report", {
+          body: { reportId: report.id, pdfBase64 },
+        });
+
+      if (analysisError) throw analysisError;
+      if (analysisData?.error) throw new Error(analysisData.error);
+
+      setProgress(100);
+      setStatus("complete");
+
+      toast.success(`Huntress-rapport analyseret! ${analysisData.sectionsCount} sektioner identificeret.`);
+      queryClient.invalidateQueries({ queryKey: ["security-reports", customerId] });
+
+      if (onUploadComplete) onUploadComplete(report.id);
+
+      setTimeout(() => {
+        setOpen(false);
+        setStatus("idle");
+        setProgress(0);
+      }, 2000);
+
+    } catch (error) {
+      console.error("Huntress upload error:", error);
+      setStatus("error");
+      setErrorMessage(error instanceof Error ? error.message : "Ukendt fejl");
+      toast.error("Fejl ved analyse af Huntress-rapport");
+    }
+
+    if (huntressInputRef.current) huntressInputRef.current.value = "";
+  };
+
   const getStatusIcon = () => {
     switch (status) {
       case "uploading":
@@ -295,14 +383,16 @@ export function SecurityReportUpload({
     }
   };
 
-  const getStatusText = (type: "csv" | "pdf" | "dns") => {
+  const getStatusText = (type: "csv" | "pdf" | "dns" | "huntress") => {
     switch (status) {
       case "uploading":
         return "Uploader fil...";
       case "analyzing":
-        return type === "dns" ? "AI analyserer DNS-rapport..." : "AI analyserer rapporten...";
+        return type === "dns" ? "AI analyserer DNS-rapport..." 
+          : type === "huntress" ? "AI analyserer Huntress-rapport..."
+          : "AI analyserer rapporten...";
       case "complete":
-        return type === "csv" || type === "dns" ? "Analyse færdig!" : "Upload færdig!";
+        return type === "csv" || type === "dns" || type === "huntress" ? "Analyse færdig!" : "Upload færdig!";
       case "error":
         return errorMessage || "Der opstod en fejl";
       default:
@@ -346,18 +436,22 @@ export function SecurityReportUpload({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); resetState(); }}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="csv" className="gap-1.5 text-xs">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="csv" className="gap-1 text-[11px] px-2">
               <FileText className="h-3.5 w-3.5" />
-              M365 (CSV)
+              M365
             </TabsTrigger>
-            <TabsTrigger value="dns" className="gap-1.5 text-xs">
+            <TabsTrigger value="dns" className="gap-1 text-[11px] px-2">
               <Globe className="h-3.5 w-3.5" />
-              DNS Sikkerhed
+              DNS
             </TabsTrigger>
-            <TabsTrigger value="pdf" className="gap-1.5 text-xs">
+            <TabsTrigger value="huntress" className="gap-1 text-[11px] px-2">
+              <Shield className="h-3.5 w-3.5" />
+              Huntress
+            </TabsTrigger>
+            <TabsTrigger value="pdf" className="gap-1 text-[11px] px-2">
               <FileUp className="h-3.5 w-3.5" />
-              Ekstern (PDF)
+              PDF
             </TabsTrigger>
           </TabsList>
 
@@ -377,7 +471,7 @@ export function SecurityReportUpload({
             )}
             {status === "idle" && (
               <p className="text-xs text-center text-muted-foreground">
-                Upload en Microsoft 365 Security Baselines rapport for automatisk AI-analyse og integration med sikkerhedsvurderingen.
+                Upload en Microsoft 365 Security Baselines rapport (CSV) for automatisk AI-analyse.
               </p>
             )}
           </TabsContent>
@@ -393,7 +487,7 @@ export function SecurityReportUpload({
                 <Progress value={progress} className="h-2" />
                 <p className="text-xs text-center text-muted-foreground">
                   {status === "analyzing" 
-                    ? "AI analyserer DNS-sikkerhedsrapporten og udtrækker fund..." 
+                    ? "AI analyserer DNS-sikkerhedsrapporten..." 
                     : `${progress}% uploadet`
                   }
                 </p>
@@ -401,7 +495,31 @@ export function SecurityReportUpload({
             )}
             {status === "idle" && (
               <p className="text-xs text-center text-muted-foreground">
-                Upload en DNS-sikkerhedsrapport (f.eks. Skysnag) i PDF-format. AI'en analyserer rapporten og udtrækker DMARC, SPF, DKIM og andre DNS-sikkerhedsfund.
+                Upload en DNS-sikkerhedsrapport (f.eks. Skysnag) i PDF-format. AI analyserer DMARC, SPF, DKIM m.m.
+              </p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="huntress" className="space-y-4 mt-4">
+            <label className={dropZoneClasses}>
+              {getStatusIcon()}
+              <p className="text-sm text-center text-muted-foreground">{getStatusText("huntress")}</p>
+              <input ref={huntressInputRef} type="file" accept=".pdf" onChange={handleHuntressSelect} disabled={status !== "idle"} className="hidden" />
+            </label>
+            {(status === "uploading" || status === "analyzing") && (
+              <div className="space-y-2">
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-center text-muted-foreground">
+                  {status === "analyzing" 
+                    ? "AI analyserer Huntress Threat Report..." 
+                    : `${progress}% uploadet`
+                  }
+                </p>
+              </div>
+            )}
+            {status === "idle" && (
+              <p className="text-xs text-center text-muted-foreground">
+                Upload en Huntress Monthly Threat Report (PDF). AI udtrækker events, signaler, hændelser og trusselsvurdering.
               </p>
             )}
           </TabsContent>
@@ -420,7 +538,7 @@ export function SecurityReportUpload({
             )}
             {status === "idle" && (
               <p className="text-xs text-center text-muted-foreground">
-                Upload en ekstern sikkerhedsrapport i PDF-format. Denne gemmes som vedhæftet dokument uden AI-analyse.
+                Upload en ekstern sikkerhedsrapport i PDF-format. Gemmes uden AI-analyse.
               </p>
             )}
           </TabsContent>
