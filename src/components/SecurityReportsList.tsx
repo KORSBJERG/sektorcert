@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DnsReportViewer } from "./DnsReportViewer";
+import { HuntressReportViewer } from "./HuntressReportViewer";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ import {
   Zap,
   Download,
   Globe,
+  Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -294,6 +296,12 @@ export function SecurityReportsList({
       }
       return <Badge variant="secondary"><Clock className="mr-1 h-3 w-3" />DNS Analyserer</Badge>;
     }
+    if (reportType === "huntress_threat") {
+      if (status === "completed") {
+        return <Badge variant="default" className="bg-orange-500"><Shield className="mr-1 h-3 w-3" />Huntress</Badge>;
+      }
+      return <Badge variant="secondary"><Clock className="mr-1 h-3 w-3" />Huntress Analyserer</Badge>;
+    }
     
     switch (status) {
       case "completed":
@@ -381,6 +389,45 @@ export function SecurityReportsList({
                     {report.analysis_status === "completed" && (report as any).analysis_result && (
                       <DnsReportViewer
                         analysisResult={(report as any).analysis_result}
+                        fileName={report.file_name}
+                      />
+                    )}
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleViewPdf(report.file_path, report.file_name)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Original PDF
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : report.report_type === "huntress_threat" ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setSelectedReport(report)}
+                      disabled={report.analysis_status !== "completed"}
+                      title="Se Huntress-analyse"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-orange-500" />
+                        Huntress Threat Report
+                      </DialogTitle>
+                      <DialogDescription>{report.file_name}</DialogDescription>
+                    </DialogHeader>
+                    {report.analysis_status === "completed" && report.analysis_result && (
+                      <HuntressReportViewer
+                        analysisResult={report.analysis_result}
                         fileName={report.file_name}
                       />
                     )}
