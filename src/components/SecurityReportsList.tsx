@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DnsReportViewer } from "./DnsReportViewer";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,8 @@ import {
   Minus,
   Eye,
   Zap,
-  Download
+  Download,
+  Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -54,6 +56,7 @@ interface SecurityReport {
   secure_score_current: number | null;
   secure_score_predicted: number | null;
   overall_status_percentage: number | null;
+  analysis_result: any;
   created_at: string;
   file_path: string;
 }
@@ -282,9 +285,14 @@ export function SecurityReportsList({
   };
 
   const getStatusBadge = (status: string, reportType: string | null) => {
-    // External PDFs don't need analysis
     if (reportType === "external_pdf") {
       return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30"><FileText className="mr-1 h-3 w-3" />PDF</Badge>;
+    }
+    if (reportType === "dns_security") {
+      if (status === "completed") {
+        return <Badge variant="default" className="bg-chart-4"><Globe className="mr-1 h-3 w-3" />DNS Analyseret</Badge>;
+      }
+      return <Badge variant="secondary"><Clock className="mr-1 h-3 w-3" />DNS Analyserer</Badge>;
     }
     
     switch (status) {
@@ -349,6 +357,45 @@ export function SecurityReportsList({
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
+              ) : report.report_type === "dns_security" ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setSelectedReport(report)}
+                      disabled={report.analysis_status !== "completed"}
+                      title="Se DNS-analyse"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-chart-4" />
+                        DNS Sikkerhedsanalyse
+                      </DialogTitle>
+                      <DialogDescription>{report.file_name}</DialogDescription>
+                    </DialogHeader>
+                    {report.analysis_status === "completed" && (report as any).analysis_result && (
+                      <DnsReportViewer
+                        analysisResult={(report as any).analysis_result}
+                        fileName={report.file_name}
+                      />
+                    )}
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleViewPdf(report.file_path, report.file_name)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Original PDF
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               ) : (
                 <Dialog>
                   <DialogTrigger asChild>
