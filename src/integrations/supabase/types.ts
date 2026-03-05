@@ -313,6 +313,87 @@ export type Database = {
           },
         ]
       }
+      nis2_plans: {
+        Row: {
+          additional_notes: string | null
+          categories: Json | null
+          created_at: string
+          created_by_user_id: string
+          customer_id: string
+          id: string
+          last_reviewed_at: string | null
+          last_reviewed_by: string | null
+          next_review_at: string | null
+          parent_plan_id: string | null
+          responsible_email: string | null
+          responsible_person: string | null
+          responsible_phone: string | null
+          responsible_role: string | null
+          risk_level: string | null
+          status: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          additional_notes?: string | null
+          categories?: Json | null
+          created_at?: string
+          created_by_user_id: string
+          customer_id: string
+          id?: string
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          next_review_at?: string | null
+          parent_plan_id?: string | null
+          responsible_email?: string | null
+          responsible_person?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
+          risk_level?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          additional_notes?: string | null
+          categories?: Json | null
+          created_at?: string
+          created_by_user_id?: string
+          customer_id?: string
+          id?: string
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          next_review_at?: string | null
+          parent_plan_id?: string | null
+          responsible_email?: string | null
+          responsible_person?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
+          risk_level?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nis2_plans_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nis2_plans_parent_plan_id_fkey"
+            columns: ["parent_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nis2_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

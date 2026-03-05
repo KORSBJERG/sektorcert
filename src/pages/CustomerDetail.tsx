@@ -25,6 +25,7 @@ import { SecurityReportsList } from "@/components/SecurityReportsList";
 import { SecurityReportsComparison } from "@/components/SecurityReportsComparison";
 import { CustomerContactInfo } from "@/components/CustomerContactInfo";
 import { EmergencyPlanSection } from "@/components/EmergencyPlanSection";
+import { NIS2PlanSection } from "@/components/nis2/NIS2PlanSection";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -298,6 +299,11 @@ const CustomerDetail = () => {
         {/* Emergency Plan Section */}
         <Card className="mb-6 p-6 shadow-elevated">
           <EmergencyPlanSection customerId={id!} customerName={customer.name} />
+        </Card>
+
+        {/* NIS2 Security Plan Section */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <NIS2PlanSection customerId={id!} customerName={customer.name} />
         </Card>
 
         <Card className="p-6 shadow-elevated">
