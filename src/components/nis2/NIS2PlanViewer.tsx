@@ -7,10 +7,12 @@ import { Progress } from "@/components/ui/progress";
 import {
   ShieldCheck, Edit, Calendar, User, CheckCircle2, Clock, Circle, Minus,
   Building2, AlertTriangle, RefreshCcw, Link2, Network, Search, Lock, Users, KeyRound,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, FileDown, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { NIS2Category, NIS2CategoryItem } from "./nis2-categories";
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -42,11 +44,14 @@ const RISK_LABELS: Record<string, { label: string; variant: "default" | "seconda
 interface NIS2PlanViewerProps {
   plan: any;
   customerName: string;
+  customerLogo?: string;
   onEdit: () => void;
 }
 
-export function NIS2PlanViewer({ plan, customerName, onEdit }: NIS2PlanViewerProps) {
+export function NIS2PlanViewer({ plan, customerName, customerLogo, onEdit }: NIS2PlanViewerProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const { toast } = useToast();
   const categories = (plan.categories as unknown as NIS2Category[]) || [];
 
   const toggleCategory = (id: string) => {
@@ -89,10 +94,60 @@ export function NIS2PlanViewer({ plan, customerName, onEdit }: NIS2PlanViewerPro
             </div>
           </div>
         </div>
-        <Button onClick={onEdit}>
-          <Edit className="h-4 w-4 mr-2" />
-          Rediger
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setIsGeneratingPdf(true);
+              try {
+                const { data, error } = await supabase.functions.invoke('generate-nis2-plan-pdf', {
+                  body: {
+                    plan: {
+                      title: plan.title,
+                      version: plan.version,
+                      status: plan.status,
+                      risk_level: plan.risk_level,
+                      responsible_person: plan.responsible_person,
+                      responsible_role: plan.responsible_role,
+                      responsible_email: plan.responsible_email,
+                      responsible_phone: plan.responsible_phone,
+                      categories,
+                      additional_notes: plan.additional_notes,
+                      last_reviewed_at: plan.last_reviewed_at,
+                      last_reviewed_by: plan.last_reviewed_by,
+                      next_review_at: plan.next_review_at,
+                      created_at: plan.created_at,
+                      updated_at: plan.updated_at,
+                    },
+                    customerName,
+                    customerLogo,
+                  },
+                });
+                if (error) throw error;
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                  printWindow.document.write(data);
+                  printWindow.document.close();
+                  printWindow.onload = () => setTimeout(() => printWindow.print(), 250);
+                }
+                toast({ title: "PDF genereret", description: "Brug browserens print-funktion for at gemme som PDF." });
+              } catch (error) {
+                console.error('Error generating PDF:', error);
+                toast({ title: "Fejl ved generering", description: "Der opstod en fejl. Prøv igen.", variant: "destructive" });
+              } finally {
+                setIsGeneratingPdf(false);
+              }
+            }}
+            disabled={isGeneratingPdf}
+          >
+            {isGeneratingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+            {isGeneratingPdf ? "Genererer..." : "Download PDF"}
+          </Button>
+          <Button onClick={onEdit}>
+            <Edit className="h-4 w-4 mr-2" />
+            Rediger
+          </Button>
+        </div>
       </div>
 
       {/* Overall Progress */}
