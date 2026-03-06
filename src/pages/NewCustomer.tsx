@@ -34,7 +34,7 @@ const NewCustomer = () => {
 
       const { data, error } = await supabase
         .from("customers")
-        .insert([validatedData])
+        .insert([validatedData as any])
         .select()
         .single();
 
