@@ -55,11 +55,12 @@ interface NIS2PlanEditorProps {
   customerId: string;
   customerName: string;
   existingPlan?: any;
+  aiGeneratedData?: any;
   onSave: () => void;
   onCancel: () => void;
 }
 
-export function NIS2PlanEditor({ customerId, customerName, existingPlan, onSave, onCancel }: NIS2PlanEditorProps) {
+export function NIS2PlanEditor({ customerId, customerName, existingPlan, aiGeneratedData, onSave, onCancel }: NIS2PlanEditorProps) {
   const [categories, setCategories] = useState<NIS2Category[]>(DEFAULT_NIS2_CATEGORIES);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,20 +72,24 @@ export function NIS2PlanEditor({ customerId, customerName, existingPlan, onSave,
       responsible_role: existingPlan?.responsible_role || "",
       responsible_email: existingPlan?.responsible_email || "",
       responsible_phone: existingPlan?.responsible_phone || "",
-      risk_level: existingPlan?.risk_level || "medium",
+      risk_level: aiGeneratedData?.risk_level || existingPlan?.risk_level || "medium",
       last_reviewed_by: existingPlan?.last_reviewed_by || "",
-      additional_notes: existingPlan?.additional_notes || "",
+      additional_notes: aiGeneratedData?.additional_notes || existingPlan?.additional_notes || "",
     },
   });
 
   useEffect(() => {
-    if (existingPlan?.categories) {
+    if (aiGeneratedData?.categories) {
+      setCategories(aiGeneratedData.categories);
+      if (aiGeneratedData.risk_level) form.setValue("risk_level", aiGeneratedData.risk_level);
+      if (aiGeneratedData.additional_notes) form.setValue("additional_notes", aiGeneratedData.additional_notes);
+    } else if (existingPlan?.categories) {
       const cats = existingPlan.categories as unknown as NIS2Category[];
       if (Array.isArray(cats) && cats.length > 0) {
         setCategories(cats);
       }
     }
-  }, [existingPlan]);
+  }, [existingPlan, aiGeneratedData]);
 
   const updateItemStatus = (catId: string, itemId: string, status: NIS2CategoryItem["status"]) => {
     setCategories(prev =>
