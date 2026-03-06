@@ -26,6 +26,7 @@ import { SecurityReportsComparison } from "@/components/SecurityReportsCompariso
 import { CustomerContactInfo } from "@/components/CustomerContactInfo";
 import { EmergencyPlanSection } from "@/components/EmergencyPlanSection";
 import { NIS2PlanSection } from "@/components/nis2/NIS2PlanSection";
+import { SecurityDashboard } from "@/components/SecurityDashboard";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -287,6 +288,10 @@ const CustomerDetail = () => {
           <CustomerContactInfo customer={customer} />
         </div>
 
+        {/* Security Dashboard */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <SecurityDashboard customerId={id!} customerName={customer.name} />
+        </Card>
 
         <Card className="mb-6 p-6 shadow-elevated">
           <div className="flex items-center justify-between mb-4">
