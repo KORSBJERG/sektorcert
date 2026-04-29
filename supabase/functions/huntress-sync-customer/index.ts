@@ -1,0 +1,122 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const HUNTRESS_BASE = "https://api.huntress.io/v1";
+const basicAuth = (k: string, s: string) => "Basic " + btoa(`${k}:${s}`);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function fetchAll(path: string, auth: string) {
+  const all: any[] = [];
+  let page = 1;
+  while (true) {
+    const sep = path.includes("?") ? "&" : "?";
+    const r = await fetch(`${HUNTRESS_BASE}${path}${sep}page=${page}&limit=500`, {
+      headers: { Authorization: auth, Accept: "application/json" },
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`Huntress ${path} ${r.status}: ${txt}`);
+    }
+    const json = await r.json();
+    const items = json.agents ?? json.incident_reports ?? json.summary_reports ?? json.organizations ?? json.data ?? [];
+    if (!Array.isArray(items)) return items;
+    all.push(...items);
+    const pagination = json.pagination;
+    if (!pagination || !pagination.next_page_number || items.length === 0) break;
+    page = pagination.next_page_number;
+    if (page > 50) break;
+  }
+  return all;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
+    if (claimsErr || !claims?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claims.claims.sub as string;
+
+    const body = await req.json().catch(() => ({}));
+    const customerId = body.customerId;
+    if (!customerId || typeof customerId !== "string" || !UUID_RE.test(customerId)) {
+      return new Response(JSON.stringify({ error: "Invalid customerId" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: customer, error: custErr } = await supabase
+      .from("customers")
+      .select("id, huntress_organization_id")
+      .eq("id", customerId)
+      .single();
+    if (custErr || !customer) {
+      return new Response(JSON.stringify({ error: "Customer not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!customer.huntress_organization_id) {
+      return new Response(JSON.stringify({ error: "Customer is not linked to a Huntress organization" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const apiKey = Deno.env.get("HUNTRESS_API_KEY");
+    const apiSecret = Deno.env.get("HUNTRESS_API_SECRET");
+    if (!apiKey || !apiSecret) {
+      return new Response(JSON.stringify({ error: "Huntress API credentials not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const auth = basicAuth(apiKey, apiSecret);
+    const orgId = customer.huntress_organization_id;
+
+    const [agents, incidents, summaries] = await Promise.all([
+      fetchAll(`/agents?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
+      fetchAll(`/incident_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
+      fetchAll(`/summary_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
+    ]);
+
+    const rows = [
+      { customer_id: customerId, sync_type: "agents", data: { items: agents }, created_by_user_id: userId },
+      { customer_id: customerId, sync_type: "incidents", data: { items: incidents }, created_by_user_id: userId },
+      { customer_id: customerId, sync_type: "summary", data: { items: summaries }, created_by_user_id: userId },
+    ];
+    const { error: insertErr } = await supabase.from("huntress_sync_data").insert(rows);
+    if (insertErr) throw insertErr;
+
+    return new Response(JSON.stringify({
+      success: true,
+      counts: {
+        agents: Array.isArray(agents) ? agents.length : 0,
+        incidents: Array.isArray(incidents) ? incidents.length : 0,
+        summaries: Array.isArray(summaries) ? summaries.length : 0,
+      },
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (err) {
+    console.error("huntress-sync-customer error", err);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
