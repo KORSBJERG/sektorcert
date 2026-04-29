@@ -27,6 +27,7 @@ import { CustomerContactInfo } from "@/components/CustomerContactInfo";
 import { EmergencyPlanSection } from "@/components/EmergencyPlanSection";
 import { NIS2PlanSection } from "@/components/nis2/NIS2PlanSection";
 import { SecurityDashboard } from "@/components/SecurityDashboard";
+import { HuntressLiveData } from "@/components/HuntressLiveData";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -291,6 +292,14 @@ const CustomerDetail = () => {
         {/* Security Dashboard */}
         <Card className="mb-6 p-6 shadow-elevated">
           <SecurityDashboard customerId={id!} customerName={customer.name} />
+        </Card>
+
+        {/* Huntress Live Data */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <HuntressLiveData
+            customerId={id!}
+            huntressOrganizationId={(customer as any).huntress_organization_id ?? null}
+          />
         </Card>
 
         <Card className="mb-6 p-6 shadow-elevated">
