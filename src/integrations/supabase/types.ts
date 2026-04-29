@@ -204,6 +204,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           created_by_user_id: string | null
+          huntress_organization_id: string | null
           id: string
           name: string
           operation_type: string
@@ -216,6 +217,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          huntress_organization_id?: string | null
           id?: string
           name: string
           operation_type: string
@@ -228,6 +230,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          huntress_organization_id?: string | null
           id?: string
           name?: string
           operation_type?: string
@@ -312,6 +315,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      huntress_sync_data: {
+        Row: {
+          created_by_user_id: string
+          customer_id: string
+          data: Json
+          id: string
+          sync_type: string
+          synced_at: string
+        }
+        Insert: {
+          created_by_user_id?: string
+          customer_id: string
+          data?: Json
+          id?: string
+          sync_type: string
+          synced_at?: string
+        }
+        Update: {
+          created_by_user_id?: string
+          customer_id?: string
+          data?: Json
+          id?: string
+          sync_type?: string
+          synced_at?: string
+        }
+        Relationships: []
       }
       nis2_plans: {
         Row: {
