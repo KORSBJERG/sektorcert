@@ -8,6 +8,7 @@ const corsHeaders = {
 const HUNTRESS_BASE = "https://api.huntress.io/v1";
 const basicAuth = (k: string, s: string) => "Basic " + btoa(`${k}:${s}`);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const normalizeSecret = (value: string) => value.trim().replace(/^['\"]+|['\"]+$/g, "");
 
 async function fetchAll(path: string, auth: string) {
   const all: any[] = [];
@@ -81,8 +82,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("HUNTRESS_API_KEY");
-    const apiSecret = Deno.env.get("HUNTRESS_API_SECRET");
+    const rawApiKey = Deno.env.get("HUNTRESS_API_KEY");
+    const rawApiSecret = Deno.env.get("HUNTRESS_API_SECRET");
+    const apiKey = rawApiKey ? normalizeSecret(rawApiKey) : null;
+    const apiSecret = rawApiSecret ? normalizeSecret(rawApiSecret) : null;
     if (!apiKey || !apiSecret) {
       return new Response(JSON.stringify({ error: "Huntress API credentials not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

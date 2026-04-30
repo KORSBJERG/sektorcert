@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link2, Loader2 } from "lucide-react";
@@ -30,6 +30,7 @@ export const HuntressLinkDialog = ({ customerId, currentOrgId }: Props) => {
       return data.organizations as Array<{ id: number | string; name: string }>;
     },
     enabled: open,
+    retry: false,
   });
 
   const handleSave = async () => {
@@ -61,6 +62,7 @@ export const HuntressLinkDialog = ({ customerId, currentOrgId }: Props) => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Forbind til Huntress-organisation</DialogTitle>
+          <DialogDescription>Vælg den Huntress-organisation, som kunden skal knyttes til.</DialogDescription>
         </DialogHeader>
         {isLoading && <div className="flex items-center gap-2 py-6"><Loader2 className="h-4 w-4 animate-spin" /> Henter organisationer…</div>}
         {error && <p className="py-4 text-destructive text-sm">{(error as Error).message}</p>}

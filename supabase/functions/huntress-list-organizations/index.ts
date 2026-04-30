@@ -8,6 +8,15 @@ const corsHeaders = {
 const HUNTRESS_BASE = "https://api.huntress.io/v1";
 const basicAuth = (k: string, s: string) => "Basic " + btoa(`${k}:${s}`);
 
+const normalizeSecret = (value: string) => value.trim().replace(/^['\"]+|['\"]+$/g, "");
+
+const credentialMeta = (value: string) => ({
+  length: value.length,
+  prefix: value.slice(0, 3),
+  hasLeadingOrTrailingWhitespace: value !== value.trim(),
+  wrappedInQuotes: /^['\"].*['\"]$/.test(value),
+});
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -31,13 +40,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("HUNTRESS_API_KEY");
-    const apiSecret = Deno.env.get("HUNTRESS_API_SECRET");
+    const rawApiKey = Deno.env.get("HUNTRESS_API_KEY");
+    const rawApiSecret = Deno.env.get("HUNTRESS_API_SECRET");
+    const apiKey = rawApiKey ? normalizeSecret(rawApiKey) : null;
+    const apiSecret = rawApiSecret ? normalizeSecret(rawApiSecret) : null;
     if (!apiKey || !apiSecret) {
       return new Response(JSON.stringify({ error: "Huntress API credentials not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log("huntress-list-organizations auth meta", {
+      apiKey: credentialMeta(rawApiKey ?? ""),
+      apiSecret: credentialMeta(rawApiSecret ?? ""),
+      normalizedKeyPrefix: apiKey.slice(0, 3),
+      normalizedSecretPrefix: apiSecret.slice(0, 3),
+    });
 
     const all: any[] = [];
     let page = 1;
@@ -47,7 +65,11 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) {
         const txt = await r.text();
-        return new Response(JSON.stringify({ error: `Huntress API ${r.status}: ${txt}` }), {
+        const hint = r.status === 401
+          ? "Huntress afviste legitimationsoplysningerne. Bekræft at HUNTRESS_API_KEY er Key ID (typisk hk_) og HUNTRESS_API_SECRET er Secret Key (typisk hs_) for samme Huntress-konto."
+          : undefined;
+
+        return new Response(JSON.stringify({ error: `Huntress API ${r.status}: ${txt}`, hint }), {
           status: r.status === 401 ? 401 : 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
