@@ -2,12 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Shield, AlertTriangle, Server, Users, Receipt, Activity, CheckCircle2, XCircle } from "lucide-react";
+import { RefreshCw, Shield, AlertTriangle, Server, Users, Receipt, Activity, CheckCircle2, XCircle, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { HuntressLinkDialog } from "./HuntressLinkDialog";
+import { HuntressDetailDialog } from "./HuntressDetailDialog";
 
 interface Props {
   customerId: string;
@@ -16,6 +17,7 @@ interface Props {
 
 export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) => {
   const [syncing, setSyncing] = useState(false);
+  const [detail, setDetail] = useState<{ kind: "agent" | "incident"; id: string | number; title: string } | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -164,7 +166,12 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
             {agents.slice(0, 20).map((a: any) => {
               const online = String(a?.status ?? "").toLowerCase() === "online";
               return (
-                <div key={a.id} className="flex items-center justify-between rounded border border-border p-3 text-sm">
+                <button
+                  type="button"
+                  key={a.id}
+                  onClick={() => setDetail({ kind: "agent", id: a.id, title: a.hostname ?? a.name ?? `Agent #${a.id}` })}
+                  className="w-full text-left flex items-center justify-between rounded border border-border p-3 text-sm hover:bg-muted/40 transition-colors"
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     {online ? (
                       <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
@@ -185,7 +192,7 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
                       {format(new Date(a.last_callback_at), "d. MMM HH:mm", { locale: da })}
                     </span>
                   )}
-                </div>
+                </button>
               );
             })}
             {agents.length > 20 && (
@@ -200,7 +207,12 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
           <h4 className="text-sm font-semibold mb-2 text-foreground">Seneste hændelser</h4>
           <div className="space-y-2">
             {incidents.slice(0, 10).map((inc: any) => (
-              <div key={inc.id} className="flex items-center justify-between rounded border border-border p-3 text-sm">
+              <button
+                type="button"
+                key={inc.id}
+                onClick={() => setDetail({ kind: "incident", id: inc.id, title: inc.summary ?? inc.title ?? `Incident #${inc.id}` })}
+                className="w-full text-left flex items-center justify-between rounded border border-border p-3 text-sm hover:bg-muted/40 transition-colors"
+              >
                 <div className="flex-1">
                   <p className="font-medium text-foreground">{inc.summary ?? inc.title ?? `Incident #${inc.id}`}</p>
                   <p className="text-xs text-muted-foreground">
@@ -213,9 +225,21 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
                     {format(new Date(inc.sent_at), "d. MMM yyyy", { locale: da })}
                   </span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {organization && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground flex gap-2">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>
+            Huntress' offentlige API eksponerer ikke pr-bruger ITDR/MFA-status. Kun aggregerede tællere
+            (M365-brugere: <strong>{organization.microsoft_365_users_count ?? "—"}</strong>,
+            faktureres: <strong>{organization.billable_identity_count ?? "—"}</strong>) er tilgængelige.
+            Pr-bruger detaljer kræver brug af Huntress-portalen.
+          </span>
         </div>
       )}
 
@@ -223,6 +247,17 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
         <p className="text-xs text-muted-foreground">
           Sidst synkroniseret: {format(new Date(syncRows[0].synced_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
         </p>
+      )}
+
+      {detail && (
+        <HuntressDetailDialog
+          open={!!detail}
+          onOpenChange={(o) => !o && setDetail(null)}
+          customerId={customerId}
+          kind={detail.kind}
+          id={detail.id}
+          title={detail.title}
+        />
       )}
     </div>
   );
