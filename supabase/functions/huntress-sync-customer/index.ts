@@ -23,7 +23,15 @@ async function fetchAll(path: string, auth: string) {
       throw new Error(`Huntress ${path} ${r.status}: ${txt}`);
     }
     const json = await r.json();
-    const items = json.agents ?? json.incident_reports ?? json.summary_reports ?? json.organizations ?? json.data ?? [];
+    const items =
+      json.agents ??
+      json.incident_reports ??
+      json.summary_reports ??
+      json.billing_reports ??
+      json.reports ??
+      json.organizations ??
+      json.data ??
+      [];
     if (!Array.isArray(items)) return items;
     all.push(...items);
     const pagination = json.pagination;
@@ -32,6 +40,17 @@ async function fetchAll(path: string, auth: string) {
     if (page > 50) break;
   }
   return all;
+}
+
+async function fetchOne(path: string, auth: string) {
+  const r = await fetch(`${HUNTRESS_BASE}${path}`, {
+    headers: { Authorization: auth, Accept: "application/json" },
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`Huntress ${path} ${r.status}: ${txt}`);
+  }
+  return await r.json();
 }
 
 Deno.serve(async (req) => {
@@ -94,16 +113,22 @@ Deno.serve(async (req) => {
     const auth = basicAuth(apiKey, apiSecret);
     const orgId = customer.huntress_organization_id;
 
-    const [agents, incidents, summaries] = await Promise.all([
+    const [organization, agents, incidents, summaries, billing] = await Promise.all([
+      fetchOne(`/organizations/${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
       fetchAll(`/agents?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
       fetchAll(`/incident_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
       fetchAll(`/summary_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
+      fetchAll(`/billing_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
     ]);
 
+    const orgPayload = (organization as any)?.organization ?? organization;
+
     const rows = [
+      { customer_id: customerId, sync_type: "organization", data: { item: orgPayload }, created_by_user_id: userId },
       { customer_id: customerId, sync_type: "agents", data: { items: agents }, created_by_user_id: userId },
       { customer_id: customerId, sync_type: "incidents", data: { items: incidents }, created_by_user_id: userId },
       { customer_id: customerId, sync_type: "summary", data: { items: summaries }, created_by_user_id: userId },
+      { customer_id: customerId, sync_type: "billing", data: { items: billing }, created_by_user_id: userId },
     ];
     const { error: insertErr } = await supabase.from("huntress_sync_data").insert(rows);
     if (insertErr) throw insertErr;
@@ -114,6 +139,8 @@ Deno.serve(async (req) => {
         agents: Array.isArray(agents) ? agents.length : 0,
         incidents: Array.isArray(incidents) ? incidents.length : 0,
         summaries: Array.isArray(summaries) ? summaries.length : 0,
+        billing: Array.isArray(billing) ? billing.length : 0,
+        organization: orgPayload && !(orgPayload as any).error ? 1 : 0,
       },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {

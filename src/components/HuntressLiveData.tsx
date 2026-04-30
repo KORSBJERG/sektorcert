@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Shield, AlertTriangle, Server } from "lucide-react";
+import { RefreshCw, Shield, AlertTriangle, Server, Users, Receipt, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -36,7 +36,14 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
   const latest = (type: string) => syncRows?.find((r) => r.sync_type === type);
   const agents = ((latest("agents")?.data as any)?.items ?? []) as any[];
   const incidents = ((latest("incidents")?.data as any)?.items ?? []) as any[];
+  const summaries = ((latest("summary")?.data as any)?.items ?? []) as any[];
+  const billing = ((latest("billing")?.data as any)?.items ?? []) as any[];
+  const organization = ((latest("organization")?.data as any)?.item ?? null) as any;
   const openIncidents = incidents.filter((i: any) => i?.status && !["closed", "resolved"].includes(String(i.status).toLowerCase()));
+  const onlineAgents = agents.filter((a: any) => String(a?.status ?? "").toLowerCase() === "online" || a?.last_callback_at);
+  const isolatedAgents = agents.filter((a: any) => a?.isolation_state && String(a.isolation_state).toLowerCase() !== "normal");
+  const lastSummary = summaries[0];
+  const lastBilling = billing[0];
 
   const handleSync = async () => {
     setSyncing(true);
@@ -74,7 +81,7 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Huntress Live</h3>
-          <Badge variant="outline">Org #{huntressOrganizationId}</Badge>
+          <Badge variant="outline">{organization?.name ?? `Org #${huntressOrganizationId}`}</Badge>
         </div>
         <div className="flex gap-2">
           <HuntressLinkDialog customerId={customerId} currentOrgId={huntressOrganizationId} />
@@ -85,12 +92,37 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {organization && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-lg border border-border bg-muted/30 p-4">
+          <div>
+            <p className="text-xs text-muted-foreground">M365-brugere</p>
+            <p className="text-lg font-bold text-foreground">{organization.microsoft_365_users_count ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Identiteter (faktureres)</p>
+            <p className="text-lg font-bold text-foreground">{organization.billable_identity_count ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">SAT-deltagere</p>
+            <p className="text-lg font-bold text-foreground">{organization.sat_learner_count ?? 0}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Log-kilder</p>
+            <p className="text-lg font-bold text-foreground">{organization.logs_sources_count ?? 0}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <Server className="h-3 w-3" /> Agenter
           </div>
           <p className="text-2xl font-bold text-foreground">{agents.length}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {onlineAgents.length} online
+            {isolatedAgents.length > 0 && ` · ${isolatedAgents.length} isoleret`}
+          </p>
         </div>
         <div className="rounded-lg border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -99,12 +131,69 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
           <p className={`text-2xl font-bold ${openIncidents.length === 0 ? "text-foreground" : openIncidents.length <= 2 ? "text-yellow-600" : "text-destructive"}`}>
             {openIncidents.length}
           </p>
+          <p className="text-xs text-muted-foreground mt-1">{incidents.length} i alt</p>
         </div>
         <div className="rounded-lg border border-border p-4">
-          <div className="text-muted-foreground text-xs mb-1">Hændelser i alt</div>
-          <p className="text-2xl font-bold text-foreground">{incidents.length}</p>
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <Activity className="h-3 w-3" /> Summary-rapporter
+          </div>
+          <p className="text-2xl font-bold text-foreground">{summaries.length}</p>
+          {lastSummary?.created_at && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Seneste: {format(new Date(lastSummary.created_at), "d. MMM", { locale: da })}
+            </p>
+          )}
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <Receipt className="h-3 w-3" /> Faktura-rapporter
+          </div>
+          <p className="text-2xl font-bold text-foreground">{billing.length}</p>
+          {lastBilling?.period && (
+            <p className="text-xs text-muted-foreground mt-1">{lastBilling.period}</p>
+          )}
         </div>
       </div>
+
+      {agents.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
+            <Users className="h-4 w-4" /> Agenter
+          </h4>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {agents.slice(0, 20).map((a: any) => {
+              const online = String(a?.status ?? "").toLowerCase() === "online";
+              return (
+                <div key={a.id} className="flex items-center justify-between rounded border border-border p-3 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {online ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">{a.hostname ?? a.name ?? `Agent #${a.id}`}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {a.platform ?? a.os}
+                        {a.version && ` · v${a.version}`}
+                        {a.isolation_state && a.isolation_state !== "normal" && ` · ${a.isolation_state}`}
+                      </p>
+                    </div>
+                  </div>
+                  {a.last_callback_at && (
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {format(new Date(a.last_callback_at), "d. MMM HH:mm", { locale: da })}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {agents.length > 20 && (
+              <p className="text-xs text-muted-foreground text-center">+{agents.length - 20} flere agenter</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {incidents.length > 0 && (
         <div>
