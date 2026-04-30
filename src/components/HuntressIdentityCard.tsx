@@ -1,5 +1,5 @@
-import { ShieldCheck, Users, KeyRound, AlertTriangle, Info } from "lucide-react";
-import { useState } from "react";
+import { ShieldCheck, Users, KeyRound, AlertTriangle, Info, Settings2, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +7,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 
@@ -24,6 +32,36 @@ const num = (v: any): number => {
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
+type Thresholds = {
+  itdrOk: number; itdrWarn: number;
+  mfaOk: number;  mfaWarn: number;
+  satOk: number;  satWarn: number;
+  unprotectedWarn: number; unprotectedBad: number;
+};
+
+const DEFAULT_THRESHOLDS: Thresholds = {
+  itdrOk: 95, itdrWarn: 75,
+  mfaOk: 95,  mfaWarn: 75,
+  satOk: 80,  satWarn: 50,
+  unprotectedWarn: 1, unprotectedBad: 3,
+};
+
+const STORAGE_KEY = "huntress-identity-thresholds";
+
+const loadThresholds = (): Thresholds => {
+  if (typeof window === "undefined") return DEFAULT_THRESHOLDS;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_THRESHOLDS;
+    return { ...DEFAULT_THRESHOLDS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_THRESHOLDS;
+  }
+};
+
+const tone = (coverage: number, ok: number, warn: number): "ok" | "warn" | "bad" =>
+  coverage >= ok ? "ok" : coverage >= warn ? "warn" : "bad";
+
 /**
  * Aggregeret ITDR/MFA oversigt pr. kunde.
  * Huntress' offentlige API eksponerer ikke pr-bruger detaljer — kun aggregerede tællere.
@@ -37,6 +75,22 @@ export const HuntressIdentityCard = ({
   source = "Huntress REST API · /v1/organizations/{id}",
 }: Props) => {
   const [open, setOpen] = useState(false);
+  const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    setThresholds(loadThresholds());
+  }, []);
+
+  const saveThresholds = (next: Thresholds) => {
+    setThresholds(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
   if (!organization) return null;
 
   const m365Users = num(organization.microsoft_365_users_count);
@@ -63,13 +117,17 @@ export const HuntressIdentityCard = ({
   const mfaCoverage = pct(mfaEnabled, m365Users);
   const unprotected = Math.max(m365Users - itdrEnrolled, 0);
 
+  const unprotectedTone: "ok" | "warn" | "bad" =
+    unprotected >= thresholds.unprotectedBad ? "bad" :
+    unprotected >= thresholds.unprotectedWarn ? "warn" : "ok";
+
   const rows: Array<{ label: string; total: number; covered: number; coverage: number; tone: "ok" | "warn" | "bad" }> = [
     {
       label: "Alle M365-brugere",
       total: m365Users,
       covered: itdrEnrolled,
       coverage: itdrCoverage,
-      tone: itdrCoverage >= 95 ? "ok" : itdrCoverage >= 75 ? "warn" : "bad",
+      tone: tone(itdrCoverage, thresholds.itdrOk, thresholds.itdrWarn),
     },
     {
       label: "Fakturerbare identiteter (ITDR)",
@@ -83,12 +141,13 @@ export const HuntressIdentityCard = ({
       total: m365Users,
       covered: sat,
       coverage: pct(sat, m365Users),
-      tone: sat === 0 ? "bad" : pct(sat, m365Users) >= 80 ? "ok" : "warn",
+      tone: sat === 0 ? "bad" : tone(pct(sat, m365Users), thresholds.satOk, thresholds.satWarn),
     },
   ];
 
   return (
     <>
+    <div className="relative">
     <button
       type="button"
       onClick={() => setOpen(true)}
@@ -111,7 +170,13 @@ export const HuntressIdentityCard = ({
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
             <Users className="h-3 w-3" /> ITDR-dækning
           </div>
-          <p className="text-2xl font-bold text-foreground">{itdrCoverage}%</p>
+          <p className={`text-2xl font-bold ${
+            tone(itdrCoverage, thresholds.itdrOk, thresholds.itdrWarn) === "ok"
+              ? "text-green-600"
+              : tone(itdrCoverage, thresholds.itdrOk, thresholds.itdrWarn) === "warn"
+              ? "text-yellow-600"
+              : "text-destructive"
+          }`}>{itdrCoverage}%</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {itdrEnrolled} af {m365Users}
           </p>
@@ -120,7 +185,15 @@ export const HuntressIdentityCard = ({
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
             <KeyRound className="h-3 w-3" /> MFA-dækning
           </div>
-          <p className="text-2xl font-bold text-foreground">
+          <p className={`text-2xl font-bold ${
+            mfaUnknown
+              ? "text-foreground"
+              : tone(mfaCoverage, thresholds.mfaOk, thresholds.mfaWarn) === "ok"
+              ? "text-green-600"
+              : tone(mfaCoverage, thresholds.mfaOk, thresholds.mfaWarn) === "warn"
+              ? "text-yellow-600"
+              : "text-destructive"
+          }`}>
             {mfaUnknown ? "—" : `${mfaCoverage}%`}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -133,7 +206,11 @@ export const HuntressIdentityCard = ({
           </div>
           <p
             className={`text-2xl font-bold ${
-              unprotected === 0 ? "text-foreground" : unprotected <= 2 ? "text-yellow-600" : "text-destructive"
+              unprotectedTone === "ok"
+                ? "text-foreground"
+                : unprotectedTone === "warn"
+                ? "text-yellow-600"
+                : "text-destructive"
             }`}
           >
             {unprotected}
@@ -175,6 +252,91 @@ export const HuntressIdentityCard = ({
         Klik for detaljer · Huntress eksponerer ikke pr-bruger MFA-status via API.
       </p>
     </button>
+
+    {/* Settings cog (positioned absolutely so it stays outside the clickable button) */}
+    <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Justér thresholds"
+          className="absolute top-3 right-3 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Settings2 className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">Thresholds (%)</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => saveThresholds(DEFAULT_THRESHOLDS)}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" /> Nulstil
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Grøn ≥ OK · Gul ≥ Advarsel · Rød under Advarsel.
+        </p>
+
+        <ThresholdRow
+          label="ITDR-dækning"
+          ok={thresholds.itdrOk}
+          warn={thresholds.itdrWarn}
+          onChange={(ok, warn) => saveThresholds({ ...thresholds, itdrOk: ok, itdrWarn: warn })}
+        />
+        <ThresholdRow
+          label="MFA-dækning"
+          ok={thresholds.mfaOk}
+          warn={thresholds.mfaWarn}
+          onChange={(ok, warn) => saveThresholds({ ...thresholds, mfaOk: ok, mfaWarn: warn })}
+        />
+        <ThresholdRow
+          label="SAT-deltagelse"
+          ok={thresholds.satOk}
+          warn={thresholds.satWarn}
+          onChange={(ok, warn) => saveThresholds({ ...thresholds, satOk: ok, satWarn: warn })}
+        />
+
+        <div className="pt-2 border-t border-border space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Ubeskyttede (antal)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Gul fra</Label>
+              <Input
+                type="number"
+                min={0}
+                value={thresholds.unprotectedWarn}
+                onChange={(e) =>
+                  saveThresholds({ ...thresholds, unprotectedWarn: Math.max(0, Number(e.target.value) || 0) })
+                }
+                className="h-8"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Rød fra</Label>
+              <Input
+                type="number"
+                min={0}
+                value={thresholds.unprotectedBad}
+                onChange={(e) =>
+                  saveThresholds({ ...thresholds, unprotectedBad: Math.max(0, Number(e.target.value) || 0) })
+                }
+                className="h-8"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">Gemmes lokalt i din browser.</p>
+      </PopoverContent>
+    </Popover>
+    </div>
 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -244,3 +406,46 @@ const Metric = ({ label, value, hint }: { label: string; value: number | string;
     {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
   </div>
 );
+
+const ThresholdRow = ({
+  label,
+  ok,
+  warn,
+  onChange,
+}: {
+  label: string;
+  ok: number;
+  warn: number;
+  onChange: (ok: number, warn: number) => void;
+}) => {
+  const clamp = (n: number) => Math.min(100, Math.max(0, n));
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Grøn ≥</p>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={ok}
+            onChange={(e) => onChange(clamp(Number(e.target.value) || 0), warn)}
+            className="h-8"
+          />
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Gul ≥</p>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={warn}
+            onChange={(e) => onChange(ok, clamp(Number(e.target.value) || 0))}
+            className="h-8"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
