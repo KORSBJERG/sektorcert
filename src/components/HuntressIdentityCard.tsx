@@ -1,8 +1,20 @@
-import { ShieldCheck, Users, KeyRound, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Users, KeyRound, AlertTriangle, Info } from "lucide-react";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { da } from "date-fns/locale";
 
 interface Props {
   organization: any;
   customerOperationType?: string | null;
+  lastSyncedAt?: string | null;
+  source?: string;
 }
 
 const num = (v: any): number => {
@@ -18,7 +30,13 @@ const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
  * Vi viser derfor en sammenfatning pr. brugertype (alle M365-brugere, fakturerbare identiteter,
  * SAT-deltagere) og en estimeret MFA/ITDR-dækning.
  */
-export const HuntressIdentityCard = ({ organization, customerOperationType }: Props) => {
+export const HuntressIdentityCard = ({
+  organization,
+  customerOperationType,
+  lastSyncedAt,
+  source = "Huntress REST API · /v1/organizations/{id}",
+}: Props) => {
+  const [open, setOpen] = useState(false);
   if (!organization) return null;
 
   const m365Users = num(organization.microsoft_365_users_count);
@@ -70,15 +88,21 @@ export const HuntressIdentityCard = ({ organization, customerOperationType }: Pr
   ];
 
   return (
-    <div className="rounded-lg border border-border p-4 space-y-4">
+    <>
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="w-full text-left rounded-lg border border-border p-4 space-y-4 hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" />
           <h4 className="text-sm font-semibold text-foreground">ITDR &amp; MFA – aggregeret</h4>
         </div>
-        {customerOperationType && (
-          <span className="text-xs text-muted-foreground">{customerOperationType}</span>
-        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {customerOperationType && <span>{customerOperationType}</span>}
+          <Info className="h-3.5 w-3.5" />
+        </div>
       </div>
 
       {/* Hero metrics */}
@@ -148,8 +172,75 @@ export const HuntressIdentityCard = ({ organization, customerOperationType }: Pr
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Huntress eksponerer ikke pr-bruger MFA-status via API. Tallene er aggregerede pr. organisation.
+        Klik for detaljer · Huntress eksponerer ikke pr-bruger MFA-status via API.
       </p>
-    </div>
+    </button>
+
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" /> ITDR &amp; MFA detaljer
+          </DialogTitle>
+          <DialogDescription>
+            Aggregerede tal fra Huntress for {organization.name ?? "organisationen"}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Metric label="M365-brugere (i alt)" value={m365Users} />
+            <Metric label="Fakturerbare identiteter" value={billable} />
+            <Metric label="ITDR-tilmeldte" value={itdrEnrolled} />
+            <Metric
+              label="MFA-aktiverede"
+              value={mfaUnknown ? "—" : mfaEnabled}
+              hint={mfaUnknown ? "Ikke eksponeret af API" : undefined}
+            />
+            <Metric label="SAT-deltagere" value={sat} />
+            <Metric label="Ubeskyttede M365-brugere" value={unprotected} />
+          </div>
+
+          <div className="rounded border border-border p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Beregnet dækning</p>
+            <div className="text-sm text-foreground space-y-1">
+              <p>ITDR-dækning: <strong>{itdrCoverage}%</strong> ({itdrEnrolled} af {m365Users})</p>
+              <p>MFA-dækning: <strong>{mfaUnknown ? "Ukendt" : `${mfaCoverage}%`}</strong></p>
+              <p>SAT-deltagelse: <strong>{pct(sat, m365Users)}%</strong> ({sat} af {m365Users})</p>
+            </div>
+          </div>
+
+          <div className="rounded border border-border p-3 space-y-1 text-sm">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Kilde &amp; synkronisering</p>
+            <p className="text-foreground"><span className="text-muted-foreground">Kilde:</span> {source}</p>
+            <p className="text-foreground">
+              <span className="text-muted-foreground">Sidst synkroniseret:</span>{" "}
+              {lastSyncedAt
+                ? format(new Date(lastSyncedAt), "d. MMMM yyyy 'kl.' HH:mm", { locale: da })
+                : "Ukendt"}
+            </p>
+            {organization.id && (
+              <p className="text-foreground">
+                <span className="text-muted-foreground">Huntress org-ID:</span> {organization.id}
+              </p>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Bemærk: Huntress' offentlige REST API leverer kun aggregerede tællere pr. organisation —
+            ikke pr-bruger MFA-status eller individuelle ITDR-records.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
+
+const Metric = ({ label, value, hint }: { label: string; value: number | string; hint?: string }) => (
+  <div className="rounded border border-border p-3">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className="text-xl font-bold text-foreground">{value}</p>
+    {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+  </div>
+);
