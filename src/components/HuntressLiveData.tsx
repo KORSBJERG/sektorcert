@@ -232,7 +232,12 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
         </div>
       )}
 
-      {organization && <HuntressIdentityCard organization={organization} />}
+      {organization && (
+        <HuntressIdentityCard
+          organization={organization}
+          lastSyncedAt={latest("organization")?.synced_at ?? syncRows?.[0]?.synced_at ?? null}
+        />
+      )}
 
       {syncRows && syncRows[0] && (
         <p className="text-xs text-muted-foreground">
