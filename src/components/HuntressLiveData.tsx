@@ -2,13 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Shield, AlertTriangle, Server, Users, Receipt, Activity, CheckCircle2, XCircle, Info } from "lucide-react";
+import { RefreshCw, Shield, AlertTriangle, Server, Users, Receipt, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { HuntressLinkDialog } from "./HuntressLinkDialog";
 import { HuntressDetailDialog } from "./HuntressDetailDialog";
+import { HuntressIdentityCard } from "./HuntressIdentityCard";
 
 interface Props {
   customerId: string;
@@ -231,17 +232,7 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
         </div>
       )}
 
-      {organization && (
-        <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground flex gap-2">
-          <Info className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>
-            Huntress' offentlige API eksponerer ikke pr-bruger ITDR/MFA-status. Kun aggregerede tællere
-            (M365-brugere: <strong>{organization.microsoft_365_users_count ?? "—"}</strong>,
-            faktureres: <strong>{organization.billable_identity_count ?? "—"}</strong>) er tilgængelige.
-            Pr-bruger detaljer kræver brug af Huntress-portalen.
-          </span>
-        </div>
-      )}
+      {organization && <HuntressIdentityCard organization={organization} />}
 
       {syncRows && syncRows[0] && (
         <p className="text-xs text-muted-foreground">
