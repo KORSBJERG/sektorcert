@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -32,56 +31,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import {
   FlaskConical,
   Upload,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Eye,
   Trash2,
-  Download,
   ExternalLink,
-  Sparkles,
-  Search,
-  CheckCircle,
-  XCircle,
-  FastForward,
-  Archive,
-  AlertTriangle,
 } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RTooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  CartesianGrid,
-  Legend,
-} from "recharts";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
-
-const NIS2_TITLES: Record<string, string> = {
-  governance: "Governance & Risikostyring",
-  incident: "Incident Håndtering",
-  continuity: "Forretningskontinuitet",
-  supply_chain: "Forsyningskædesikkerhed",
-  network: "Netværks- & Systemsikkerhed",
-  vulnerability: "Sårbarhedshåndtering",
-  access: "Adgangskontrol",
-  hr_awareness: "HR & Awareness",
-  crypto: "Kryptografi",
-};
 
 const SEVERITY_ORDER: Array<"critical" | "high" | "medium" | "low" | "info"> = [
   "critical",
