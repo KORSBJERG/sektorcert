@@ -452,6 +452,94 @@ const Metric = ({ label, value, hint }: { label: string; value: number | string;
   </div>
 );
 
+type HistoryPoint = { synced_at: string; itdrCoverage: number; mfaCoverage: number | null };
+
+const Sparkline = ({ values, color }: { values: number[]; color: string }) => {
+  if (values.length === 0) return null;
+  const w = 220, h = 40, pad = 4;
+  const max = 100;
+  const step = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
+  const points = values.map((v, i) => {
+    const x = pad + i * step;
+    const y = h - pad - ((v / max) * (h - pad * 2));
+    return `${x},${y}`;
+  });
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points.join(" ")}
+      />
+      {values.map((v, i) => {
+        const [x, y] = points[i].split(",").map(Number);
+        return <circle key={i} cx={x} cy={y} r={2.5} fill={color} />;
+      })}
+    </svg>
+  );
+};
+
+const TrendBlock = ({ history }: { history?: HistoryPoint[] }) => {
+  if (!history || history.length < 2) {
+    return (
+      <div className="rounded border border-border p-3 space-y-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Trend (seneste synk)</p>
+        <p className="text-xs text-muted-foreground">
+          Mindst to synkroniseringer kræves for at vise trend. {history?.length ?? 0} synk gemt.
+        </p>
+      </div>
+    );
+  }
+  const itdrSeries = history.map((p) => p.itdrCoverage);
+  const mfaSeries = history.map((p) => p.mfaCoverage).filter((v): v is number => v !== null);
+  const itdrDelta = itdrSeries[itdrSeries.length - 1] - itdrSeries[0];
+  const mfaDelta = mfaSeries.length >= 2 ? mfaSeries[mfaSeries.length - 1] - mfaSeries[0] : null;
+  const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d}%`;
+
+  return (
+    <div className="rounded border border-border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Trend · seneste {history.length} synk
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {format(new Date(history[0].synced_at), "d. MMM", { locale: da })} →{" "}
+          {format(new Date(history[history.length - 1].synced_at), "d. MMM yyyy", { locale: da })}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-xs text-muted-foreground">ITDR-dækning</span>
+            <span className={`text-xs font-medium ${
+              itdrDelta > 0 ? "text-green-600" : itdrDelta < 0 ? "text-destructive" : "text-muted-foreground"
+            }`}>{fmtDelta(itdrDelta)}</span>
+          </div>
+          <Sparkline values={itdrSeries} color="hsl(var(--primary))" />
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-xs text-muted-foreground">MFA-dækning</span>
+            <span className={`text-xs font-medium ${
+              mfaDelta === null ? "text-muted-foreground" :
+              mfaDelta > 0 ? "text-green-600" : mfaDelta < 0 ? "text-destructive" : "text-muted-foreground"
+            }`}>{mfaDelta === null ? "—" : fmtDelta(mfaDelta)}</span>
+          </div>
+          {mfaSeries.length >= 2 ? (
+            <Sparkline values={mfaSeries} color="hsl(142 76% 36%)" />
+          ) : (
+            <p className="text-xs text-muted-foreground h-[40px] flex items-center">Ikke eksponeret af API</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ThresholdRow = ({
   label,
   ok,
