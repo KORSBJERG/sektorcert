@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import {
   FlaskConical,
   Upload,
@@ -44,7 +45,28 @@ import {
   Download,
   ExternalLink,
   Sparkles,
+  Search,
+  CheckCircle,
+  XCircle,
+  FastForward,
+  Archive,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RTooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
