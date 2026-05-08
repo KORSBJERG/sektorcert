@@ -50,8 +50,8 @@ const AssessmentReport = () => {
     queryKey: ["profiles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name, email")
+        .from("public_profiles")
+        .select("id, display_name")
         .order("display_name");
       if (error) throw error;
       return data;
@@ -292,14 +292,14 @@ const AssessmentReport = () => {
                   {profiles?.map((profile) => (
                     <SelectItem 
                       key={profile.id} 
-                      value={profile.display_name || profile.email || profile.id}
+                      value={profile.display_name || profile.id}
                     >
-                      {profile.display_name || profile.email || "Ukendt"}
+                      {profile.display_name || "Ukendt"}
                     </SelectItem>
                   ))}
                   {/* Include current value if not in profiles */}
                   {selectedConsultant && !profiles?.some(p => 
-                    (p.display_name || p.email || p.id) === selectedConsultant
+                    (p.display_name || p.id) === selectedConsultant
                   ) && (
                     <SelectItem value={selectedConsultant}>
                       {selectedConsultant}
