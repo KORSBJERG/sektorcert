@@ -415,6 +415,8 @@ export const HuntressIdentityCard = ({
             </div>
           </div>
 
+          <TrendBlock history={history} />
+
           <div className="rounded border border-border p-3 space-y-1 text-sm">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Kilde &amp; synkronisering</p>
             <p className="text-foreground"><span className="text-muted-foreground">Kilde:</span> {source}</p>
