@@ -1,5 +1,7 @@
 import { ShieldCheck, Users, KeyRound, AlertTriangle, Info, Settings2, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ import { da } from "date-fns/locale";
 
 interface Props {
   organization: any;
+  customerId?: string;
   customerOperationType?: string | null;
   lastSyncedAt?: string | null;
   source?: string;
@@ -70,6 +73,7 @@ const tone = (coverage: number, ok: number, warn: number): "ok" | "warn" | "bad"
  */
 export const HuntressIdentityCard = ({
   organization,
+  customerId,
   customerOperationType,
   lastSyncedAt,
   source = "Huntress REST API · /v1/organizations/{id}",
@@ -90,6 +94,45 @@ export const HuntressIdentityCard = ({
       /* ignore */
     }
   };
+
+  const { data: history } = useQuery({
+    queryKey: ["huntress-identity-history", customerId],
+    enabled: !!customerId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("huntress_sync_data")
+        .select("synced_at, data")
+        .eq("customer_id", customerId!)
+        .eq("sync_type", "organization")
+        .order("synced_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return (data ?? []).reverse().map((row: any) => {
+        const item = row?.data?.item ?? {};
+        const m365 = num(item.microsoft_365_users_count);
+        const itdr = num(
+          item.itdr_identity_count ??
+            item.itdr_enrolled_count ??
+            item.identities_protected_count ??
+            item.billable_identity_count
+        );
+        const mfa = num(
+          item.mfa_enabled_count ??
+            item.identities_with_mfa_count ??
+            item.mfa_user_count
+        );
+        const mfaKnown =
+          "mfa_enabled_count" in item ||
+          "identities_with_mfa_count" in item ||
+          "mfa_user_count" in item;
+        return {
+          synced_at: row.synced_at as string,
+          itdrCoverage: pct(itdr, m365),
+          mfaCoverage: mfaKnown ? pct(mfa, m365) : null,
+        };
+      });
+    },
+  });
 
   if (!organization) return null;
 
@@ -372,6 +415,8 @@ export const HuntressIdentityCard = ({
             </div>
           </div>
 
+          <TrendBlock history={history} />
+
           <div className="rounded border border-border p-3 space-y-1 text-sm">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Kilde &amp; synkronisering</p>
             <p className="text-foreground"><span className="text-muted-foreground">Kilde:</span> {source}</p>
@@ -406,6 +451,94 @@ const Metric = ({ label, value, hint }: { label: string; value: number | string;
     {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
   </div>
 );
+
+type HistoryPoint = { synced_at: string; itdrCoverage: number; mfaCoverage: number | null };
+
+const Sparkline = ({ values, color }: { values: number[]; color: string }) => {
+  if (values.length === 0) return null;
+  const w = 220, h = 40, pad = 4;
+  const max = 100;
+  const step = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
+  const points = values.map((v, i) => {
+    const x = pad + i * step;
+    const y = h - pad - ((v / max) * (h - pad * 2));
+    return `${x},${y}`;
+  });
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points.join(" ")}
+      />
+      {values.map((v, i) => {
+        const [x, y] = points[i].split(",").map(Number);
+        return <circle key={i} cx={x} cy={y} r={2.5} fill={color} />;
+      })}
+    </svg>
+  );
+};
+
+const TrendBlock = ({ history }: { history?: HistoryPoint[] }) => {
+  if (!history || history.length < 2) {
+    return (
+      <div className="rounded border border-border p-3 space-y-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Trend (seneste synk)</p>
+        <p className="text-xs text-muted-foreground">
+          Mindst to synkroniseringer kræves for at vise trend. {history?.length ?? 0} synk gemt.
+        </p>
+      </div>
+    );
+  }
+  const itdrSeries = history.map((p) => p.itdrCoverage);
+  const mfaSeries = history.map((p) => p.mfaCoverage).filter((v): v is number => v !== null);
+  const itdrDelta = itdrSeries[itdrSeries.length - 1] - itdrSeries[0];
+  const mfaDelta = mfaSeries.length >= 2 ? mfaSeries[mfaSeries.length - 1] - mfaSeries[0] : null;
+  const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d}%`;
+
+  return (
+    <div className="rounded border border-border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Trend · seneste {history.length} synk
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {format(new Date(history[0].synced_at), "d. MMM", { locale: da })} →{" "}
+          {format(new Date(history[history.length - 1].synced_at), "d. MMM yyyy", { locale: da })}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-xs text-muted-foreground">ITDR-dækning</span>
+            <span className={`text-xs font-medium ${
+              itdrDelta > 0 ? "text-green-600" : itdrDelta < 0 ? "text-destructive" : "text-muted-foreground"
+            }`}>{fmtDelta(itdrDelta)}</span>
+          </div>
+          <Sparkline values={itdrSeries} color="hsl(var(--primary))" />
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-xs text-muted-foreground">MFA-dækning</span>
+            <span className={`text-xs font-medium ${
+              mfaDelta === null ? "text-muted-foreground" :
+              mfaDelta > 0 ? "text-green-600" : mfaDelta < 0 ? "text-destructive" : "text-muted-foreground"
+            }`}>{mfaDelta === null ? "—" : fmtDelta(mfaDelta)}</span>
+          </div>
+          {mfaSeries.length >= 2 ? (
+            <Sparkline values={mfaSeries} color="hsl(142 76% 36%)" />
+          ) : (
+            <p className="text-xs text-muted-foreground h-[40px] flex items-center">Ikke eksponeret af API</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ThresholdRow = ({
   label,

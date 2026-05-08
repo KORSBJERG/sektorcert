@@ -235,6 +235,7 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
       {organization && (
         <HuntressIdentityCard
           organization={organization}
+          customerId={customerId}
           lastSyncedAt={latest("organization")?.synced_at ?? syncRows?.[0]?.synced_at ?? null}
         />
       )}
