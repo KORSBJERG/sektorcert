@@ -18,6 +18,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Portal = lazy(() => import("./pages/Portal"));
 
 const RouteFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
@@ -36,6 +37,14 @@ const App = () => (
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/portal"
+            element={
+              <ProtectedRoute allowCustomer>
+                <Portal />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={
