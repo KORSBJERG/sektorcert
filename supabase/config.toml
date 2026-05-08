@@ -1,21 +1,21 @@
 project_id = "zulflhpajmruocscgqbt"
 
-[functions.generate-assessment-pdf]
+[functions.analyze-dns-report]
 verify_jwt = true
 
-[functions.generate-security-report-pdf]
+[functions.analyze-huntress-report]
+verify_jwt = true
+
+[functions.analyze-maester-run]
 verify_jwt = true
 
 [functions.analyze-security-report]
 verify_jwt = true
 
-[functions.huntress-sync]
-verify_jwt = true
-
-[functions.analyze-huntress-data]
-verify_jwt = true
-
 [functions.cvr-lookup]
+verify_jwt = true
+
+[functions.generate-assessment-pdf]
 verify_jwt = true
 
 [functions.generate-emergency-plan-pdf]
@@ -25,4 +25,19 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-nis2-plan-pdf]
+verify_jwt = true
+
+[functions.generate-security-report-pdf]
+verify_jwt = true
+
+[functions.huntress-detail]
+verify_jwt = true
+
+[functions.huntress-list-organizations]
+verify_jwt = true
+
+[functions.huntress-sync-customer]
+verify_jwt = true
+
+[functions.parse-maester-upload]
 verify_jwt = true
