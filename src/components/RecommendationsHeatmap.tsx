@@ -117,7 +117,7 @@ export const RecommendationsHeatmap = ({ customerId }: Props) => {
       </div>
 
       <TooltipProvider delayDuration={100}>
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-9 md:grid-cols-13" style={{ gridTemplateColumns: undefined }}>
+        <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-12 xl:[grid-template-columns:repeat(13,minmax(0,1fr))]">
           {recommendations.map((rec) => {
             const level = levelById.get(rec.id);
             return (
