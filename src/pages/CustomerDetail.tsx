@@ -30,6 +30,7 @@ import { SecurityDashboard } from "@/components/SecurityDashboard";
 import { HuntressLiveData } from "@/components/HuntressLiveData";
 import { MaesterSection } from "@/components/maester/MaesterSection";
 import { RecommendationsHeatmap } from "@/components/RecommendationsHeatmap";
+import { InviteCustomerDialog } from "@/components/InviteCustomerDialog";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -269,6 +270,7 @@ const CustomerDetail = () => {
             </div>
             <div className="flex gap-2">
               <SecurityReportUpload customerId={id!} />
+              <InviteCustomerDialog customerId={id!} customerName={customer.name} />
               <Button
                 onClick={() => navigate(`/assessments/new?customer=${id}`)}
                 className="gap-2 bg-gradient-primary hover:opacity-90"
