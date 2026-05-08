@@ -1,5 +1,7 @@
 import { ShieldCheck, Users, KeyRound, AlertTriangle, Info, Settings2, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ import { da } from "date-fns/locale";
 
 interface Props {
   organization: any;
+  customerId?: string;
   customerOperationType?: string | null;
   lastSyncedAt?: string | null;
   source?: string;
@@ -70,6 +73,7 @@ const tone = (coverage: number, ok: number, warn: number): "ok" | "warn" | "bad"
  */
 export const HuntressIdentityCard = ({
   organization,
+  customerId,
   customerOperationType,
   lastSyncedAt,
   source = "Huntress REST API · /v1/organizations/{id}",
@@ -90,6 +94,45 @@ export const HuntressIdentityCard = ({
       /* ignore */
     }
   };
+
+  const { data: history } = useQuery({
+    queryKey: ["huntress-identity-history", customerId],
+    enabled: !!customerId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("huntress_sync_data")
+        .select("synced_at, data")
+        .eq("customer_id", customerId!)
+        .eq("sync_type", "organization")
+        .order("synced_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return (data ?? []).reverse().map((row: any) => {
+        const item = row?.data?.item ?? {};
+        const m365 = num(item.microsoft_365_users_count);
+        const itdr = num(
+          item.itdr_identity_count ??
+            item.itdr_enrolled_count ??
+            item.identities_protected_count ??
+            item.billable_identity_count
+        );
+        const mfa = num(
+          item.mfa_enabled_count ??
+            item.identities_with_mfa_count ??
+            item.mfa_user_count
+        );
+        const mfaKnown =
+          "mfa_enabled_count" in item ||
+          "identities_with_mfa_count" in item ||
+          "mfa_user_count" in item;
+        return {
+          synced_at: row.synced_at as string,
+          itdrCoverage: pct(itdr, m365),
+          mfaCoverage: mfaKnown ? pct(mfa, m365) : null,
+        };
+      });
+    },
+  });
 
   if (!organization) return null;
 
