@@ -22,11 +22,12 @@ function normaliseSeverity(s: unknown): Severity {
   return "info";
 }
 
-function normaliseResult(r: unknown): "Passed" | "Failed" | "Skipped" | "NotRun" {
+function normaliseResult(r: unknown): "Passed" | "Failed" | "Skipped" | "NotRun" | "Error" {
   const v = String(r ?? "").toLowerCase();
   if (v === "passed" || v === "pass") return "Passed";
   if (v === "failed" || v === "fail") return "Failed";
   if (v === "skipped" || v === "skip") return "Skipped";
+  if (v === "error" || v === "errored") return "Error";
   return "NotRun";
 }
 
