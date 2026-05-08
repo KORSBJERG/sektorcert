@@ -29,6 +29,7 @@ import { NIS2PlanSection } from "@/components/nis2/NIS2PlanSection";
 import { SecurityDashboard } from "@/components/SecurityDashboard";
 import { HuntressLiveData } from "@/components/HuntressLiveData";
 import { MaesterSection } from "@/components/maester/MaesterSection";
+import { RecommendationsHeatmap } from "@/components/RecommendationsHeatmap";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -293,6 +294,11 @@ const CustomerDetail = () => {
         {/* Security Dashboard */}
         <Card className="mb-6 p-6 shadow-elevated">
           <SecurityDashboard customerId={id!} customerName={customer.name} />
+        </Card>
+
+        {/* Recommendations heatmap */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <RecommendationsHeatmap customerId={id!} />
         </Card>
 
         {/* Huntress Live Data */}
