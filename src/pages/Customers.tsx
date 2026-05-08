@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, ArrowLeft, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { HuntressImportDialog } from "@/components/HuntressImportDialog";
 
 const Customers = () => {
   const { data: customers, isLoading } = useQuery({
@@ -32,12 +33,15 @@ const Customers = () => {
               </Link>
               <h1 className="text-2xl font-bold text-foreground">Alle Kunder</h1>
             </div>
-            <Link to="/customers/new">
-              <Button className="gap-2 bg-gradient-primary hover:opacity-90">
-                <Plus className="h-4 w-4" />
-                Ny Kunde
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <HuntressImportDialog />
+              <Link to="/customers/new">
+                <Button className="gap-2 bg-gradient-primary hover:opacity-90">
+                  <Plus className="h-4 w-4" />
+                  Ny Kunde
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
