@@ -343,6 +343,84 @@ export type Database = {
         }
         Relationships: []
       }
+      maester_runs: {
+        Row: {
+          analysis_status: string
+          created_at: string
+          created_by_user_id: string
+          customer_id: string
+          executed_at: string | null
+          id: string
+          json_path: string | null
+          maester_version: string | null
+          nis2_mapping: Json | null
+          notes: string | null
+          pass_percentage: number | null
+          pester_version: string | null
+          result_html_path: string | null
+          result_json: Json | null
+          severity_counts: Json
+          tenant_id: string | null
+          tenant_name: string | null
+          tests_failed: number
+          tests_not_run: number
+          tests_passed: number
+          tests_skipped: number
+          tests_total: number
+          updated_at: string
+        }
+        Insert: {
+          analysis_status?: string
+          created_at?: string
+          created_by_user_id?: string
+          customer_id: string
+          executed_at?: string | null
+          id?: string
+          json_path?: string | null
+          maester_version?: string | null
+          nis2_mapping?: Json | null
+          notes?: string | null
+          pass_percentage?: number | null
+          pester_version?: string | null
+          result_html_path?: string | null
+          result_json?: Json | null
+          severity_counts?: Json
+          tenant_id?: string | null
+          tenant_name?: string | null
+          tests_failed?: number
+          tests_not_run?: number
+          tests_passed?: number
+          tests_skipped?: number
+          tests_total?: number
+          updated_at?: string
+        }
+        Update: {
+          analysis_status?: string
+          created_at?: string
+          created_by_user_id?: string
+          customer_id?: string
+          executed_at?: string | null
+          id?: string
+          json_path?: string | null
+          maester_version?: string | null
+          nis2_mapping?: Json | null
+          notes?: string | null
+          pass_percentage?: number | null
+          pester_version?: string | null
+          result_html_path?: string | null
+          result_json?: Json | null
+          severity_counts?: Json
+          tenant_id?: string | null
+          tenant_name?: string | null
+          tests_failed?: number
+          tests_not_run?: number
+          tests_passed?: number
+          tests_skipped?: number
+          tests_total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       nis2_plans: {
         Row: {
           additional_notes: string | null
