@@ -1,94 +1,96 @@
-## Huntress API integration — træk kundedata automatisk
 
-### Vigtig afklaring først: MCP vs. REST API
+# Maester-rapport upload pr. kunde
 
-Du linker til Huntress **MCP Server**. MCP (Model Context Protocol) er beregnet til at udvide AI-assistenter (som mig under udvikling) — det kan **ikke** kaldes fra en webapp som din. 
+Du kører selv `Invoke-Maester` lokalt og uploader output-filen på kundens side. Vi gemmer den, parser den, og viser et overskueligt dashboard + fuld rapport pr. kunde — samme mønster som jeres eksisterende M365 baseline-/DNS-rapporter.
 
-Heldigvis findes præcis det samme data via **Huntress REST API** (`https://api.huntress.io/v1`), som er det MCP-serveren selv bruger under motorhjelmen. Vi bruger derfor REST API'et direkte. Det kræver de samme credentials (API Key + Secret) som MCP.
+## Hvad du uploader
 
-Tilgængelige endpoints (read-only, public beta):
-1. Account
-2. Organizations
-3. Agents
-4. Incident Reports
-5. Summary Reports
-6. Signals / Bulletins
+Maester producerer flere filer i sin output-mappe. Vi accepterer to formater:
 
-Auth: HTTP Basic Auth (`base64(api_key:api_secret)`).
+1. **`TestResults.json`** *(anbefalet — alt vi behøver)*
+   Indeholder alle test-resultater struktureret: `Tests[]` med `Name`, `Result` (Passed/Failed/Skipped/NotRun), `Block`, `Tag`, `ErrorRecord`, `HelpUrl`, `Severity`, samt `TenantId`, `TenantName`, `ExecutedAt`, `Pester`-version osv.
+2. **`TestResults.html`** *(valgfri)*
+   Den pæne Maester-rapport som vi viser indlejret i en sandboxed iframe.
 
-### Hvad vi bygger
+Du kan uploade én eller begge filer i samme upload (eller en `.zip` af hele output-mappen — vi pakker den ud server-side og finder de relevante filer).
 
-En komplet integration hvor du kan:
-- Gemme Huntress API-nøgler globalt (som secrets — ikke per kunde, da én Huntress-konto typisk dækker alle dine MSP-kunder).
-- Knytte hver Lovable-kunde til en Huntress `organization_id`.
-- Synkronisere agenter, incidents og summary report for den kunde med ét klik.
-- Vise live data (antal agenter, åbne incidents, sidste 30 dages signals) på kundens detaljeside og i `SecurityDashboard`.
+## Datamodel (én ny tabel + én bucket)
 
-### Tekniske ændringer
+Tabel `maester_runs`:
+- `customer_id`, `created_by_user_id`
+- `tenant_id`, `tenant_name`
+- `executed_at` (timestamptz fra rapporten)
+- `maester_version`, `pester_version`
+- `tests_total`, `tests_passed`, `tests_failed`, `tests_skipped`, `tests_not_run`
+- `pass_percentage` (numeric, beregnet)
+- `severity_counts` (jsonb: `{ critical, high, medium, low, info }`)
+- `result_json` (jsonb — fuldt parset Maester-output)
+- `result_html_path` (storage path, nullable)
+- `json_path` (storage path)
+- `nis2_mapping` (jsonb, sat af AI-analysen)
+- `analysis_status` — `pending` · `completed` · `failed`
+- `notes` (text — fri kommentar)
 
-**1. Secrets**
-Tilføj to runtime-secrets via secret-tool:
-- `HUNTRESS_API_KEY`
-- `HUNTRESS_API_SECRET`
+Storage-bucket `maester-reports` (privat) — RLS scopet pr. bruger, samme mønster som `security-reports`.
 
-**2. Database (migration)**
+RLS på `maester_runs`: bruger kan kun se/oprette/slette egne runs (`created_by_user_id = auth.uid()`).
 
-Ny kolonne på `customers`:
-- `huntress_organization_id` (text, nullable) — Huntress' org ID for denne kunde.
+## Edge functions
 
-Ny tabel `huntress_sync_data`:
-```
-id uuid pk
-customer_id uuid not null
-sync_type text  -- 'agents' | 'incidents' | 'summary' | 'organization'
-data jsonb
-synced_at timestamptz default now()
-created_by_user_id uuid
-```
-RLS: kun ejer (`created_by_user_id = auth.uid()`) kan se/skrive.
+1. **`parse-maester-upload`** *(kaldes efter upload)*
+   - Input: `{ customer_id, json_storage_path, html_storage_path? }`
+   - Henter JSON fra storage, validerer struktur med Zod
+   - Beregner counts, pass-procent, severity-fordeling
+   - Indsætter `maester_runs`-row, status `pending` for AI-analyse
+   - Trigger `analyze-maester-run` async
+2. **`analyze-maester-run`**
+   - Lovable AI (Gemini 2.5 Flash) — prompt med failed/skipped tests
+   - Mapper findings til de 9 NIS2-domæner (samme `nis2-categories.ts`-id'er som I bruger andre steder)
+   - Gemmer `nis2_mapping`, sætter `analysis_status=completed`
 
-**3. Edge functions** (alle med `verify_jwt = true`)
+Begge funktioner følger samme CORS/JWT-mønster som `analyze-dns-report` og `analyze-security-report`.
 
-- `huntress-list-organizations` — henter alle organisationer fra Huntress (bruges i en dropdown når man knytter kunde til Huntress-org).
-- `huntress-sync-customer` — tager `customer_id` + `huntress_organization_id`, henter agents + incidents + summary report fra Huntress, gemmer i `huntress_sync_data`.
-- `huntress-get-data` — henter cachede sync-data for en kunde (eller trigger ny sync hvis ældre end x timer).
+## UI på kundesiden (`CustomerDetail`)
 
-Alle tre:
-- Validerer JWT i koden.
-- Læser `HUNTRESS_API_KEY` / `HUNTRESS_API_SECRET` fra env.
-- Kalder `https://api.huntress.io/v1/...` med `Authorization: Basic <base64>`.
-- Håndterer pagination (Huntress bruger `?page=N&limit=500`, max 500).
-- Returnerer 429 venligt hvis rate-limited.
+Ny sektion **"Maester – M365 sikkerhedstest"** (indsat under Sikkerhedsrapporter, før Beredskabsplan):
 
-**4. Frontend**
+- **`MaesterReportUpload`** — knap *"Upload Maester-rapport"* åbner dialog:
+  - Drag-and-drop / vælg fil (`.json`, `.html`, `.zip`, max 20 MB)
+  - Hvis kun HTML uploades: fejlbesked om at JSON er nødvendig for analyse
+  - Loader-state mens parse + AI kører
+- **`MaesterReportsList`** — tabel med alle runs for kunden:
+  - Kolonner: dato (executed_at), tenant, pass-procent (badge: grøn ≥90%, gul ≥70%, rød), failed/total, severity-chips, AI-status, handlinger
+  - Handlinger: "Vis rapport", "Sammenlign", slet
+- **`MaesterDashboardCard`** øverst i sektionen:
+  - KPI-tal: seneste pass-procent, failed-count, dato
+  - Donut: failed pr. NIS2-domæne
+  - Sparkline-trend over de seneste 6 runs (genbruger samme komponent som ITDR-trenden)
+- **`MaesterReportViewer`** dialog (åbnes fra "Vis rapport"):
+  - Tab 1 *"Oversigt"*: KPI'er, severity-fordeling, top-failed tests (med Maester `HelpUrl` som "Læs mere")
+  - Tab 2 *"NIS2-mapping"*: AI-genereret per-domæne analyse (samme stil som DNS-rapport)
+  - Tab 3 *"Fuld rapport"*: indlejret HTML i sandboxed iframe (signed storage URL) — fallback hvis HTML ikke uploadet: render fra JSON som tabel
+  - Knap "Download original" (signed URL til JSON+HTML)
+- Optag i **Unified Security Dashboard**: tilføj Maester som ny datakilde sammen med M365 baseline, DNS og Huntress.
 
-- Ny komponent `HuntressLinkDialog.tsx` — på CustomerDetail. Knap "Forbind til Huntress" åbner dialog med dropdown over organisationer fra Huntress, vælg én → gemmer `huntress_organization_id` på kunden.
-- Ny komponent `HuntressLiveData.tsx` — vises på CustomerDetail når kunden er linket. Viser:
-  - Antal aktive agenter
-  - Åbne / lukkede incidents (sidste 30 dage)
-  - Liste over seneste 10 incidents med severity, status, tidspunkt
-  - "Synkroniser nu"-knap → kalder `huntress-sync-customer`.
-- Udvid `SecurityDashboard.tsx` med et nyt panel "Huntress Live" der viser status (grøn = 0 åbne incidents, gul = 1-2, rød = 3+).
+## Robusthed
 
-**5. Flow-diagram**
+- Zod-schema for Maester JSON, så vi giver en pæn fejlmeddelelse hvis filen ikke er gyldig (hvis Maester ændrer felter, fejler vi tydeligt og logger den ukendte struktur).
+- Filtypevalidering + størrelsesgrænse client-side OG i edge function.
+- Signed URLs (kort levetid) til rapport-visning — aldrig offentlig bucket.
+- HTML-rapporten vises i `<iframe sandbox>` uden `allow-same-origin` for at undgå XSS.
+- Audit-log entry pr. upload (genbruger jeres `audit_logs`-mønster).
 
-```text
-Customer Detail page
-   │
-   ├─ "Forbind Huntress" knap
-   │     └─► huntress-list-organizations ──► Huntress API
-   │           └─► gem huntress_organization_id på customer
-   │
-   └─ HuntressLiveData panel
-         ├─ "Sync nu" ──► huntress-sync-customer
-         │                  ├─► GET /v1/agents?organization_id=X
-         │                  ├─► GET /v1/incident_reports?organization_id=X
-         │                  └─► GET /v1/summary_reports?organization_id=X
-         │                       └─► gemmer i huntress_sync_data
-         └─ viser data fra huntress_sync_data (cached)
-```
+## Faseplan
 
-### Spørgsmål inden jeg starter
+1. **Migration** — `maester_runs`-tabel, RLS, storage-bucket + policies.
+2. **Edge functions** — `parse-maester-upload`, `analyze-maester-run`.
+3. **UI** — `MaesterReportUpload`, `MaesterReportsList`, `MaesterReportViewer`, `MaesterDashboardCard`, indsæt i `CustomerDetail`.
+4. **Unified Dashboard** — tilføj Maester-datakilde.
+5. **QA** — test med en rigtig Maester-output, verificér parsing, AI-mapping, HTML-visning.
 
-1. Du har sikkert allerede en Huntress API Key + Secret (genereres i Huntress-konsollen under Account → API Credentials). Er du klar til at indtaste dem som secrets når jeg spørger?
-2. Vil du have automatisk daglig sync via en cron-job (kan tilføjes senere), eller er manuel "Sync nu"-knap nok til at starte med?
+## Hvad der ikke er med (med vilje)
+
+- Ingen runner / ingen kald til M365 / ingen credentials gemmes — du kører Maester selv.
+- Ingen automatisk planlægning af runs — kun upload på demand.
+
+Sig til når jeg skal gå i gang, så starter jeg med migrationen.
