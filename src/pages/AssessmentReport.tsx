@@ -292,14 +292,14 @@ const AssessmentReport = () => {
                   {profiles?.map((profile) => (
                     <SelectItem 
                       key={profile.id} 
-                      value={profile.display_name || profile.email || profile.id}
+                      value={profile.display_name || profile.id}
                     >
-                      {profile.display_name || profile.email || "Ukendt"}
+                      {profile.display_name || "Ukendt"}
                     </SelectItem>
                   ))}
                   {/* Include current value if not in profiles */}
                   {selectedConsultant && !profiles?.some(p => 
-                    (p.display_name || p.email || p.id) === selectedConsultant
+                    (p.display_name || p.id) === selectedConsultant
                   ) && (
                     <SelectItem value={selectedConsultant}>
                       {selectedConsultant}
