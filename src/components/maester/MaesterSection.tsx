@@ -833,7 +833,6 @@ function MaesterDashboardCard({ runs }: { runs: MaesterRun[] }) {
 
 export function MaesterSection({ customerId }: { customerId: string }) {
   const qc = useQueryClient();
-  const [viewerRun, setViewerRun] = useState<MaesterRun | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: runs = [], isLoading } = useQuery({
@@ -862,6 +861,22 @@ export function MaesterSection({ customerId }: { customerId: string }) {
     toast.success("Maester-rapport slettet");
     qc.invalidateQueries({ queryKey: ["maester-runs", customerId] });
     setDeleteId(null);
+  }
+
+  async function openOriginal(r: MaesterRun) {
+    const path = r.result_html_path ?? r.json_path;
+    if (!path) {
+      toast.error("Ingen fil uploaded for dette run");
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from("maester-reports")
+      .createSignedUrl(path, 600);
+    if (error || !data?.signedUrl) {
+      toast.error("Kunne ikke åbne filen: " + (error?.message ?? "ukendt fejl"));
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -942,8 +957,13 @@ export function MaesterSection({ customerId }: { customerId: string }) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setViewerRun(r)}>
-                          <Eye className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openOriginal(r)}
+                          title={r.result_html_path ? "Åbn HTML-rapport" : "Åbn JSON-rapport"}
+                        >
+                          <ExternalLink className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteId(r.id)}>
                           <Trash2 className="h-4 w-4" />
@@ -956,14 +976,6 @@ export function MaesterSection({ customerId }: { customerId: string }) {
             </Table>
           </div>
         </>
-      )}
-
-      {viewerRun && (
-        <MaesterReportViewer
-          run={viewerRun}
-          open={!!viewerRun}
-          onOpenChange={(o) => !o && setViewerRun(null)}
-        />
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
