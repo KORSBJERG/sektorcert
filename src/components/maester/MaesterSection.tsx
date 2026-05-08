@@ -760,16 +760,6 @@ function MaesterReportViewer({ run, open, onOpenChange }: { run: MaesterRun; ope
   );
 }
 
-        <DialogFooter>
-          <Button variant="outline" onClick={downloadJson} className="gap-2">
-            <Download className="h-4 w-4" /> Hent JSON
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 /* -------------------------------------------------------------------------- */
 /*  Dashboard card (KPI + sparkline)                                           */
 /* -------------------------------------------------------------------------- */
