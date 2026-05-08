@@ -384,6 +384,19 @@ export function MaesterSection({ customerId }: { customerId: string }) {
   });
 
   async function handleDelete(id: string) {
+    // Find paths first so we can clean up storage
+    const run = runs.find((r) => r.id === id);
+    const paths = [run?.json_path, run?.result_html_path].filter(
+      (p): p is string => typeof p === "string" && p.length > 0,
+    );
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabase.storage
+        .from("maester-reports")
+        .remove(paths);
+      if (storageErr) {
+        console.warn("Storage cleanup failed:", storageErr.message);
+      }
+    }
     const { error } = await supabase.from("maester_runs" as any).delete().eq("id", id);
     if (error) {
       toast.error("Kunne ikke slette: " + error.message);
