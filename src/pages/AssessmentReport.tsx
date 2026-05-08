@@ -50,8 +50,8 @@ const AssessmentReport = () => {
     queryKey: ["profiles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name, email")
+        .from("public_profiles")
+        .select("id, display_name")
         .order("display_name");
       if (error) throw error;
       return data;
