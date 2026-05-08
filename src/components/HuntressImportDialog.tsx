@@ -17,7 +17,7 @@ export const HuntressImportDialog = () => {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [operationType, setOperationType] = useState("Privat");
+  const [operationType, setOperationType] = useState<"IT" | "OT" | "BOTH">("IT");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -121,14 +121,12 @@ export const HuntressImportDialog = () => {
           <>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input placeholder="Søg navn eller ID…" value={search} onChange={(e) => setSearch(e.target.value)} />
-              <Select value={operationType} onValueChange={setOperationType}>
+              <Select value={operationType} onValueChange={(v) => setOperationType(v as "IT" | "OT" | "BOTH")}>
                 <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Privat">Privat</SelectItem>
-                  <SelectItem value="Offentlig">Offentlig</SelectItem>
-                  <SelectItem value="Kommune">Kommune</SelectItem>
-                  <SelectItem value="Region">Region</SelectItem>
-                  <SelectItem value="Stat">Stat</SelectItem>
+                  <SelectItem value="IT">IT</SelectItem>
+                  <SelectItem value="OT">OT</SelectItem>
+                  <SelectItem value="BOTH">Begge (IT og OT)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
