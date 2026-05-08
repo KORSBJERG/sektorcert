@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -32,56 +31,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import {
   FlaskConical,
   Upload,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Eye,
   Trash2,
-  Download,
   ExternalLink,
-  Sparkles,
-  Search,
-  CheckCircle,
-  XCircle,
-  FastForward,
-  Archive,
-  AlertTriangle,
 } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RTooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  CartesianGrid,
-  Legend,
-} from "recharts";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
-
-const NIS2_TITLES: Record<string, string> = {
-  governance: "Governance & Risikostyring",
-  incident: "Incident Håndtering",
-  continuity: "Forretningskontinuitet",
-  supply_chain: "Forsyningskædesikkerhed",
-  network: "Netværks- & Systemsikkerhed",
-  vulnerability: "Sårbarhedshåndtering",
-  access: "Adgangskontrol",
-  hr_awareness: "HR & Awareness",
-  crypto: "Kryptografi",
-};
 
 const SEVERITY_ORDER: Array<"critical" | "high" | "medium" | "low" | "info"> = [
   "critical",
@@ -329,436 +290,6 @@ function MaesterUploadDialog({ customerId }: { customerId: string }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Report viewer                                                              */
-/* -------------------------------------------------------------------------- */
-
-function MaesterReportViewer({ run, open, onOpenChange }: { run: MaesterRun; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const [htmlUrl, setHtmlUrl] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [severityFilter, setSeverityFilter] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(["Passed", "Failed"]));
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-
-  useMemo(() => {
-    if (!open || !run.result_html_path) {
-      setHtmlUrl(null);
-      return;
-    }
-    supabase.storage
-      .from("maester-reports")
-      .createSignedUrl(run.result_html_path, 600)
-      .then(({ data }) => setHtmlUrl(data?.signedUrl ?? null));
-  }, [open, run.result_html_path]);
-
-  const tests = (run.result_json?.tests ?? []) as any[];
-
-  // Counts (recompute from tests for accuracy + Error support on legacy rows)
-  const counts = useMemo(() => {
-    const c = { total: tests.length, passed: 0, failed: 0, skipped: 0, notRun: 0, error: 0 };
-    for (const t of tests) {
-      if (t.result === "Passed") c.passed++;
-      else if (t.result === "Failed") c.failed++;
-      else if (t.result === "Skipped") c.skipped++;
-      else if (t.result === "Error") c.error++;
-      else c.notRun++;
-    }
-    return c;
-  }, [tests]);
-
-  const passPct = counts.passed + counts.failed > 0
-    ? Math.round((counts.passed / (counts.passed + counts.failed)) * 100)
-    : 0;
-  const failPct = 100 - passPct;
-
-  // Severity x result data
-  const severityData = useMemo(() => {
-    const sevs = ["Critical", "High", "Medium", "Low"];
-    return sevs.map((label) => {
-      const key = label.toLowerCase();
-      const passed = tests.filter((t) => (t.severity ?? "").toLowerCase() === key && t.result === "Passed").length;
-      const failed = tests.filter((t) => (t.severity ?? "").toLowerCase() === key && t.result === "Failed").length;
-      return { name: label, Passed: passed, Failed: failed };
-    });
-  }, [tests]);
-
-  // Category data (by Block / first tag)
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of tests) {
-      const cat = (t.block as string) || (Array.isArray(t.tag) ? t.tag[0] : t.tag) || "Other";
-      set.add(cat);
-    }
-    return Array.from(set).sort();
-  }, [tests]);
-
-  const categoryData = useMemo(() => {
-    return categories.map((cat) => {
-      const inCat = tests.filter(
-        (t) => ((t.block as string) || (Array.isArray(t.tag) ? t.tag[0] : t.tag) || "Other") === cat,
-      );
-      return {
-        name: cat,
-        Passed: inCat.filter((t) => t.result === "Passed").length,
-        Failed: inCat.filter((t) => t.result === "Failed").length,
-        Skipped: inCat.filter((t) => t.result === "Skipped" || t.result === "NotRun").length,
-      };
-    });
-  }, [tests, categories]);
-
-  // Filtered tests
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return tests.filter((t) => {
-      if (q && !`${t.id ?? ""} ${t.name ?? ""}`.toLowerCase().includes(q)) return false;
-      if (severityFilter.size > 0 && !severityFilter.has((t.severity ?? "").toLowerCase())) return false;
-      if (statusFilter.size > 0 && !statusFilter.has(t.result)) return false;
-      if (categoryFilter !== "all") {
-        const cat = (t.block as string) || (Array.isArray(t.tag) ? t.tag[0] : t.tag) || "Other";
-        if (cat !== categoryFilter) return false;
-      }
-      return true;
-    });
-  }, [tests, search, severityFilter, statusFilter, categoryFilter]);
-
-  function toggleInSet(set: Set<string>, value: string, setter: (s: Set<string>) => void) {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    setter(next);
-  }
-
-  async function downloadJson() {
-    if (!run.json_path) return;
-    const { data } = await supabase.storage
-      .from("maester-reports")
-      .createSignedUrl(run.json_path, 60, { download: true });
-    if (data?.signedUrl) window.location.href = data.signedUrl;
-  }
-
-  const KPI = ({ label, value, icon: Icon, tone, pct }: any) => (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <Icon className={`h-4 w-4 ${tone}`} />
-      </div>
-      <p className="text-3xl font-bold tracking-tight">{value}</p>
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div className={`h-full ${tone.replace("text-", "bg-")}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <FlaskConical className="h-6 w-6 text-primary" />
-            Test Overview
-          </DialogTitle>
-          <DialogDescription className="text-xs uppercase tracking-wide text-primary">
-            {run.tenant_name ?? "Maester"} ·{" "}
-            {run.executed_at
-              ? format(new Date(run.executed_at), "d. MMMM yyyy, HH.mm", { locale: da })
-              : "Ukendt dato"}
-            {run.maester_version && <> · v{run.maester_version}</>}
-          </DialogDescription>
-        </DialogHeader>
-
-        <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-6 mt-3 self-start">
-            <TabsTrigger value="overview">Oversigt</TabsTrigger>
-            <TabsTrigger value="nis2">NIS2-mapping</TabsTrigger>
-            <TabsTrigger value="html" disabled={!run.result_html_path}>Original rapport</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="flex-1 overflow-auto px-6 py-4 space-y-4 mt-0">
-            {/* KPI tiles */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <KPI label="Total tests" value={counts.total} icon={Archive} tone="text-foreground" pct={100} />
-              <KPI label="Passed" value={counts.passed} icon={CheckCircle} tone="text-success" pct={(counts.passed / Math.max(counts.total, 1)) * 100} />
-              <KPI label="Failed" value={counts.failed} icon={AlertTriangle} tone="text-destructive" pct={(counts.failed / Math.max(counts.total, 1)) * 100} />
-              <KPI label="Skipped" value={counts.skipped} icon={FastForward} tone="text-warning" pct={(counts.skipped / Math.max(counts.total, 1)) * 100} />
-              <KPI label="Not tested" value={counts.notRun} icon={Archive} tone="text-muted-foreground" pct={(counts.notRun / Math.max(counts.total, 1)) * 100} />
-              <KPI label="Error" value={counts.error} icon={XCircle} tone="text-warning" pct={(counts.error / Math.max(counts.total, 1)) * 100} />
-            </div>
-
-            {/* Charts row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Donut */}
-              <div className="rounded-lg border bg-card p-4">
-                <h4 className="text-sm font-semibold mb-2">Test status</h4>
-                <div className="h-56 relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: "Pass", value: counts.passed },
-                          { name: "Fail", value: counts.failed },
-                        ]}
-                        innerRadius={55}
-                        outerRadius={85}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        <Cell fill="hsl(var(--success))" />
-                        <Cell fill="hsl(var(--destructive))" />
-                      </Pie>
-                      <RTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-xs uppercase text-muted-foreground">{passPct >= 50 ? "Passed" : "Failed"}</span>
-                  </div>
-                </div>
-                <div className="mt-2 space-y-1 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-success" /> Pass</span>
-                    <span className="font-semibold">{passPct}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-destructive" /> Fail</span>
-                    <span className="font-semibold">{failPct}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Severity bars */}
-              <div className="rounded-lg border bg-card p-4">
-                <h4 className="text-sm font-semibold mb-2">By severity</h4>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={severityData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                      <RTooltip />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="Passed" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Failed" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Category area */}
-              <div className="rounded-lg border bg-card p-4">
-                <h4 className="text-sm font-semibold mb-2">By category</h4>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={categoryData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                      <RTooltip />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Area type="monotone" dataKey="Passed" stroke="hsl(var(--success))" fill="hsl(var(--success) / 0.2)" />
-                      <Area type="monotone" dataKey="Failed" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive) / 0.2)" />
-                      <Area type="monotone" dataKey="Skipped" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground) / 0.15)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="rounded-lg border bg-card p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Søg på ID eller titel..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {["critical", "high", "medium", "low"].map((s) => {
-                    const active = severityFilter.has(s);
-                    return (
-                      <button
-                        key={s}
-                        onClick={() => toggleInSet(severityFilter, s, setSeverityFilter)}
-                        className={`px-2 py-1 rounded-md text-xs border transition-colors ${
-                          active ? severityColor(s) : "bg-background text-muted-foreground hover:bg-accent"
-                        }`}
-                      >
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </button>
-                    );
-                  })}
-                  {severityFilter.size > 0 && (
-                    <button onClick={() => setSeverityFilter(new Set())} className="text-xs text-muted-foreground underline">
-                      Ryd
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { v: "Passed", label: "Passed", cls: "bg-success/15 text-success border-success/30" },
-                    { v: "Failed", label: "Failed", cls: "bg-destructive/15 text-destructive border-destructive/30" },
-                    { v: "Skipped", label: "Skipped", cls: "bg-warning/15 text-warning border-warning/30" },
-                    { v: "NotRun", label: "Not tested", cls: "bg-muted text-muted-foreground border-border" },
-                  ].map((opt) => {
-                    const active = statusFilter.has(opt.v);
-                    return (
-                      <button
-                        key={opt.v}
-                        onClick={() => toggleInSet(statusFilter, opt.v, setStatusFilter)}
-                        className={`px-2 py-1 rounded-md text-xs border transition-colors ${
-                          active ? opt.cls : "bg-background text-muted-foreground hover:bg-accent"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="h-9 w-full md:w-64 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">Alle kategorier</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Test list */}
-            <div className="rounded-lg border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-28">ID</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead className="w-28 text-right">Severity</TableHead>
-                    <TableHead className="w-28 text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((t: any, idx: number) => (
-                    <TableRow key={`${t.id}-${idx}`}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{t.id}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{t.name}</span>
-                          {t.helpUrl && (
-                            <a href={t.helpUrl} target="_blank" rel="noreferrer" className="text-primary">
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                        {t.block && <p className="text-xs text-muted-foreground mt-0.5">{t.block}</p>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline" className={severityColor(t.severity ?? "info")}>{t.severity ?? "info"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={
-                            t.result === "Passed"
-                              ? "bg-success/15 text-success border-success/30 gap-1"
-                              : t.result === "Failed"
-                              ? "bg-destructive/15 text-destructive border-destructive/30 gap-1"
-                              : t.result === "Skipped"
-                              ? "bg-warning/15 text-warning border-warning/30 gap-1"
-                              : "bg-muted text-muted-foreground border-border gap-1"
-                          }
-                        >
-                          {t.result === "Passed" && <CheckCircle className="h-3 w-3" />}
-                          {t.result === "Failed" && <AlertTriangle className="h-3 w-3" />}
-                          {t.result === "Skipped" && <FastForward className="h-3 w-3" />}
-                          {t.result}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filtered.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
-                        Ingen tests matcher filtrene.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="nis2" className="flex-1 overflow-auto px-6 py-4 space-y-4 mt-0">
-            {run.analysis_status === "pending" && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> AI-analyse er i gang...
-              </div>
-            )}
-            {run.analysis_status === "failed" && (
-              <p className="text-destructive text-sm">AI-analysen fejlede.</p>
-            )}
-            {run.analysis_status === "completed" && run.nis2_mapping && (
-              <>
-                <div className="rounded-lg border bg-accent/30 p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Sammenfatning</span>
-                    {run.nis2_mapping.risk_level && (
-                      <Badge variant="outline" className={severityColor(run.nis2_mapping.risk_level)}>
-                        Risiko: {run.nis2_mapping.risk_level}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">{run.nis2_mapping.summary}</p>
-                </div>
-                <div className="space-y-3">
-                  {(run.nis2_mapping.nis2_relevance ?? []).map((c: any) => (
-                    <div key={c.category_id} className="rounded-lg border p-3">
-                      <p className="font-medium text-sm">
-                        {NIS2_TITLES[c.category_id] ?? c.category_id}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">{c.relevance}</p>
-                      {c.affected_test_ids?.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Berørte tests: {c.affected_test_ids.slice(0, 6).join(", ")}
-                          {c.affected_test_ids.length > 6 && ` +${c.affected_test_ids.length - 6}`}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="html" className="flex-1 overflow-hidden px-6 py-4 mt-0">
-            {htmlUrl ? (
-              <iframe
-                src={htmlUrl}
-                title="Maester report"
-                sandbox="allow-popups allow-popups-to-escape-sandbox"
-                className="h-[75vh] w-full rounded-md border bg-white"
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">Ingen HTML-rapport uploaded.</p>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        <DialogFooter className="border-t px-6 py-3">
-          <Button variant="outline" onClick={downloadJson} className="gap-2">
-            <Download className="h-4 w-4" /> Hent JSON
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Dashboard card (KPI + sparkline)                                           */
@@ -853,6 +384,19 @@ export function MaesterSection({ customerId }: { customerId: string }) {
   });
 
   async function handleDelete(id: string) {
+    // Find paths first so we can clean up storage
+    const run = runs.find((r) => r.id === id);
+    const paths = [run?.json_path, run?.result_html_path].filter(
+      (p): p is string => typeof p === "string" && p.length > 0,
+    );
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabase.storage
+        .from("maester-reports")
+        .remove(paths);
+      if (storageErr) {
+        console.warn("Storage cleanup failed:", storageErr.message);
+      }
+    }
     const { error } = await supabase.from("maester_runs" as any).delete().eq("id", id);
     if (error) {
       toast.error("Kunne ikke slette: " + error.message);
