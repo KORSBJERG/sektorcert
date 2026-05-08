@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** When true, allows users with the 'customer' role to access this route. Default: false (consultant-only). */
+  allowCustomer?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, allowCustomer = false }: ProtectedRouteProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { role, loading: roleLoading } = useUserRole();
+  const location = useLocation();
 
   useEffect(() => {
     const ensureProfile = async (session: Session | null) => {
@@ -50,7 +55,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (isAuthenticated === null) {
+  if (isAuthenticated === null || (isAuthenticated && roleLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
         <p className="text-muted-foreground">Indlæser...</p>
@@ -60,6 +65,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Customer-role users are restricted to /portal pages
+  if (role === "customer" && !allowCustomer && !location.pathname.startsWith("/portal")) {
+    return <Navigate to="/portal" replace />;
   }
 
   return <>{children}</>;
