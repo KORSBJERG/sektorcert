@@ -869,14 +869,22 @@ export function MaesterSection({ customerId }: { customerId: string }) {
       toast.error("Ingen fil uploaded for dette run");
       return;
     }
-    const { data, error } = await supabase.storage
-      .from("maester-reports")
-      .createSignedUrl(path, 600);
-    if (error || !data?.signedUrl) {
-      toast.error("Kunne ikke åbne filen: " + (error?.message ?? "ukendt fejl"));
-      return;
+    const isHtml = !!r.result_html_path;
+    try {
+      const { data, error } = await supabase.storage
+        .from("maester-reports")
+        .download(path);
+      if (error || !data) throw error ?? new Error("Kunne ikke hente filen");
+      const blob = new Blob([await data.arrayBuffer()], {
+        type: isHtml ? "text/html;charset=utf-8" : "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      // Revoke later so the new tab has time to load
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      toast.error("Kunne ikke åbne filen: " + (e?.message ?? "ukendt fejl"));
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
