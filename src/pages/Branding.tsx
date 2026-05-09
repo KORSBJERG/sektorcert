@@ -358,7 +358,13 @@ const Branding = () => {
         mime: "image/jpeg",
         quality: 0.85,
       });
-      setBgDataUrl(fitted);
+      // Compose firmanavn + logo on top so it's clearly branded
+      const branded = await composeLoginBackground(fitted, {
+        companyName: companyName || "Velkommen",
+        logoSrc: logoDataUrl,
+        accentColor: colors[0] && colors[0].toLowerCase() !== "#000000" ? "#ffffff" : "#ffffff",
+      });
+      setBgDataUrl(branded);
       toast.success("Baggrund genereret");
     } catch (e: any) {
       toast.error(e?.message ?? "Kunne ikke generere baggrund");
