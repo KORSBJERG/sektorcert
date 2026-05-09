@@ -31,6 +31,7 @@ import { HuntressLiveData } from "@/components/HuntressLiveData";
 import { MaesterSection } from "@/components/maester/MaesterSection";
 import { RecommendationsHeatmap } from "@/components/RecommendationsHeatmap";
 import { InviteCustomerDialog } from "@/components/InviteCustomerDialog";
+import { CustomerDocuments } from "@/components/CustomerDocuments";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -322,6 +323,11 @@ const CustomerDetail = () => {
         {/* Maester section */}
         <Card className="mb-6 p-6 shadow-elevated">
           <MaesterSection customerId={id!} />
+        </Card>
+
+        {/* Documents & Reports */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <CustomerDocuments customerId={id!} />
         </Card>
 
         {/* Emergency Plan Section */}
