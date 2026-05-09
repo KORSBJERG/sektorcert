@@ -321,9 +321,11 @@ export type Database = {
           created_by_user_id: string | null
           huntress_organization_id: string | null
           id: string
+          logo_url: string | null
           name: string
           operation_type: string
           updated_at: string
+          website: string | null
         }
         Insert: {
           address?: string | null
@@ -334,9 +336,11 @@ export type Database = {
           created_by_user_id?: string | null
           huntress_organization_id?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           operation_type: string
           updated_at?: string
+          website?: string | null
         }
         Update: {
           address?: string | null
@@ -347,9 +351,11 @@ export type Database = {
           created_by_user_id?: string | null
           huntress_organization_id?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           operation_type?: string
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
