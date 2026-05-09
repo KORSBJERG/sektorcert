@@ -83,6 +83,33 @@ export function EmergencyPlanEditor({
     }
   }, [existingPlan]);
 
+  // Pre-fill IT contact info from the current user's profile when creating a new plan
+  useEffect(() => {
+    if (existingPlan) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, email, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const name = profile?.display_name || "";
+      const email = profile?.email || user.email || "";
+      const phone = profile?.phone || "";
+      if (name && !form.getValues("it_contact_name")) form.setValue("it_contact_name", name);
+      if (email && !form.getValues("it_contact_email")) form.setValue("it_contact_email", email);
+      if (phone && !form.getValues("it_contact_phone")) form.setValue("it_contact_phone", phone);
+      if (!form.getValues("it_contact_company")) form.setValue("it_contact_company", "PEAKNET");
+      if (name && !form.getValues("last_reviewed_by")) {
+        form.setValue("last_reviewed_by", `${name} (PEAKNET)`);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [existingPlan, form]);
+
   const toggleMeasure = (id: string) => {
     setSecurityMeasures(prev =>
       prev.map(m => (m.id === id ? { ...m, enabled: !m.enabled } : m))
