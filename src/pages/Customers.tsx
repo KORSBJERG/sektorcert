@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, ArrowLeft, Building2, Mail, Phone, MapPin, RefreshCw } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, ArrowLeft, Building2, Mail, Phone, MapPin, RefreshCw, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { HuntressImportDialog } from "@/components/HuntressImportDialog";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +14,7 @@ const Customers = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const navigate = useNavigate();
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ["customers"],
@@ -83,57 +86,74 @@ const Customers = () => {
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Indlæser...</div>
         ) : customers && customers.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {customers.map((customer) => (
-              <Card key={customer.id} className="p-6 shadow-card hover:shadow-elevated transition-shadow">
-                <div className="mb-4 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="h-6 w-6 text-primary" />
-                  </div>
-                  <span className="rounded-full bg-secondary/10 px-3 py-1 text-xs font-medium text-secondary">
-                    {customer.operation_type}
-                  </span>
-                </div>
-
-                <h3 className="mb-3 text-xl font-semibold text-foreground">{customer.name}</h3>
-
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  {customer.contact_person && (
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>{customer.contact_person}</span>
-                    </div>
-                  )}
-                  {customer.contact_email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      <span className="truncate">{customer.contact_email}</span>
-                    </div>
-                  )}
-                  {customer.contact_phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{customer.contact_phone}</span>
-                    </div>
-                  )}
-                  {customer.address && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate">{customer.address}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-border">
-                  <Link to={`/customers/${customer.id}`}>
-                    <Button variant="outline" className="w-full">
-                      Se detaljer
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card className="shadow-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kunde</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Kontaktperson</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Adresse</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow
+                    key={customer.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/customers/${customer.id}`)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="font-medium text-foreground">{customer.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded-full bg-secondary/10 px-2.5 py-1 text-xs font-medium text-secondary">
+                        {customer.operation_type}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {customer.contact_person || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {customer.contact_email ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[200px]">{customer.contact_email}</span>
+                        </span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {customer.contact_phone ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5" />
+                          {customer.contact_phone}
+                        </span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {customer.address ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[220px]">{customer.address}</span>
+                        </span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         ) : (
           <Card className="p-12 text-center shadow-card">
             <Building2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
