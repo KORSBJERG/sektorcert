@@ -881,6 +881,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_document_download: {
+        Args: { _document_id: string }
+        Returns: undefined
+      }
       user_has_customer_access: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean
