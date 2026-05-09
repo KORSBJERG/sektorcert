@@ -10,6 +10,7 @@ import { da } from "date-fns/locale";
 import { HuntressLinkDialog } from "./HuntressLinkDialog";
 import { HuntressDetailDialog } from "./HuntressDetailDialog";
 import { HuntressIdentityCard } from "./HuntressIdentityCard";
+import { HuntressInsights } from "./HuntressInsights";
 
 interface Props {
   customerId: string;
@@ -41,6 +42,7 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
   const incidents = ((latest("incidents")?.data as any)?.items ?? []) as any[];
   const summaries = ((latest("summary")?.data as any)?.items ?? []) as any[];
   const billing = ((latest("billing")?.data as any)?.items ?? []) as any[];
+  const identities = ((latest("identities")?.data as any)?.items ?? []) as any[];
   const organization = ((latest("organization")?.data as any)?.item ?? null) as any;
   const openIncidents = incidents.filter((i: any) => i?.status && !["closed", "resolved"].includes(String(i.status).toLowerCase()));
   const onlineAgents = agents.filter((a: any) => String(a?.status ?? "").toLowerCase() === "online" || a?.last_callback_at);
@@ -239,6 +241,13 @@ export const HuntressLiveData = ({ customerId, huntressOrganizationId }: Props) 
           lastSyncedAt={latest("organization")?.synced_at ?? syncRows?.[0]?.synced_at ?? null}
         />
       )}
+
+      <HuntressInsights
+        agents={agents}
+        incidents={incidents}
+        identities={identities}
+        billing={billing}
+      />
 
       {syncRows && syncRows[0] && (
         <p className="text-xs text-muted-foreground">
