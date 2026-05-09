@@ -21,7 +21,6 @@ import {
   Check,
   X,
   Globe,
-  ImageIcon,
 } from "lucide-react";
 
 interface CustomerContactInfoProps {
