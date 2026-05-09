@@ -353,6 +353,75 @@ export type Database = {
         }
         Relationships: []
       }
+      data_processing_agreements: {
+        Row: {
+          additional_notes: string | null
+          content: string
+          controller_address: string
+          controller_cvr: string
+          controller_name: string
+          created_at: string
+          created_by_user_id: string
+          customer_id: string
+          effective_date: string | null
+          id: string
+          parent_agreement_id: string | null
+          processor_address: string | null
+          processor_cvr: string | null
+          processor_name: string
+          signed_at: string | null
+          signed_by: string | null
+          status: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          additional_notes?: string | null
+          content?: string
+          controller_address?: string
+          controller_cvr?: string
+          controller_name?: string
+          created_at?: string
+          created_by_user_id: string
+          customer_id: string
+          effective_date?: string | null
+          id?: string
+          parent_agreement_id?: string | null
+          processor_address?: string | null
+          processor_cvr?: string | null
+          processor_name: string
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          additional_notes?: string | null
+          content?: string
+          controller_address?: string
+          controller_cvr?: string
+          controller_name?: string
+          created_at?: string
+          created_by_user_id?: string
+          customer_id?: string
+          effective_date?: string | null
+          id?: string
+          parent_agreement_id?: string | null
+          processor_address?: string | null
+          processor_cvr?: string | null
+          processor_name?: string
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       emergency_plans: {
         Row: {
           additional_notes: string | null
