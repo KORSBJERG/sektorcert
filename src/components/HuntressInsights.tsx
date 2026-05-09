@@ -10,7 +10,7 @@ interface Props {
   agents: any[];
   incidents: any[];
   identities: any[];
-  billing: any[];
+  billing?: any[];
 }
 
 const truthy = (v: any) =>
@@ -76,7 +76,7 @@ const Bar = ({ label, value, total, tone }: { label: string; value: number; tota
   );
 };
 
-export const HuntressInsights = ({ agents, incidents, identities, billing }: Props) => {
+export const HuntressInsights = ({ agents, incidents, identities }: Props) => {
   // ------ Endpoint health ------
   const endpoint = useMemo(() => {
     const total = agents.length;
@@ -154,18 +154,6 @@ export const HuntressInsights = ({ agents, incidents, identities, billing }: Pro
     }).length;
     return { total, mfaOn, mfaOff, admins: admins.length, adminsNoMfa, external, stale, risky };
   }, [identities]);
-
-  // ------ Billing trend ------
-  const bill = useMemo(() => {
-    const sorted = [...billing]
-      .filter(b => b?.created_at)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .slice(-6);
-    const last = sorted[sorted.length - 1];
-    const prev = sorted[sorted.length - 2];
-    const delta = last && prev ? Number(last.quantity ?? 0) - Number(prev.quantity ?? 0) : 0;
-    return { sorted, last, prev, delta };
-  }, [billing]);
 
   if (agents.length === 0 && incidents.length === 0 && identities.length === 0) return null;
 
@@ -302,36 +290,6 @@ export const HuntressInsights = ({ agents, incidents, identities, billing }: Pro
               </p>
             )}
           </div>
-        </Section>
-      )}
-
-      {/* BILLING TREND */}
-      {bill.sorted.length > 0 && (
-        <Section title="Forbrug & fakturering" icon={Receipt}>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-            <Stat
-              icon={Receipt}
-              label="Seneste faktura"
-              value={bill.last ? `${(bill.last.amount/100).toLocaleString("da-DK", { maximumFractionDigits: 0 })} ${String(bill.last.currency_type ?? "").toUpperCase()}` : "—"}
-              hint={bill.last?.created_at ? format(new Date(bill.last.created_at), "MMM yyyy", { locale: da }) : undefined}
-            />
-            <Stat
-              icon={TrendingUp}
-              label="Mængde-ændring"
-              value={`${bill.delta >= 0 ? "+" : ""}${bill.delta}`}
-              hint={bill.prev ? `vs. forrige periode` : "ingen tidligere periode"}
-              tone={bill.delta === 0 ? "default" : bill.delta > 0 ? "warn" : "ok"}
-            />
-            <Stat
-              icon={Activity}
-              label="Perioder synkroniseret"
-              value={bill.sorted.length}
-              hint="seneste 6"
-            />
-          </div>
-          {bill.last?.plan && (
-            <p className="text-xs text-muted-foreground">Plan: {bill.last.plan}</p>
-          )}
         </Section>
       )}
     </div>
