@@ -107,12 +107,16 @@ export const CustomerDocuments = ({ customerId, canUpload = true }: Props) => {
     }
   };
 
-  const handleDownload = async (path: string, name: string) => {
+  const handleDownload = async (docId: string, path: string, name: string) => {
     const { data, error } = await supabase.storage.from("customer-documents").createSignedUrl(path, 60);
     if (error || !data) {
       toast({ title: "Fejl", description: "Kunne ikke hente fil", variant: "destructive" });
       return;
     }
+    // Fire-and-forget audit log
+    supabase.rpc("log_document_download", { _document_id: docId }).then(({ error: rpcErr }) => {
+      if (rpcErr) console.warn("Failed to log download:", rpcErr.message);
+    });
     const a = document.createElement("a");
     a.href = data.signedUrl;
     a.download = name;
