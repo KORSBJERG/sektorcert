@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import {
   ShieldAlert, Server, AlertTriangle, KeyRound, Clock, TrendingUp,
-  WifiOff, ShieldOff, Activity, UserX, UserCheck, Receipt,
+  WifiOff, ShieldOff, Activity, UserX, UserCheck,
 } from "lucide-react";
-import { format, differenceInDays, differenceInHours } from "date-fns";
-import { da } from "date-fns/locale";
+import { differenceInDays, differenceInHours } from "date-fns";
 
 interface Props {
   agents: any[];
