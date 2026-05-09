@@ -140,6 +140,9 @@ const Dashboard = () => {
               <Link to="/audit-logs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Audit Log
               </Link>
+              <Link to="/branding" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                M365 Branding
+              </Link>
             </nav>
 
             <div className="flex items-center gap-3">
