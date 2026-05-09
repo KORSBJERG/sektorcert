@@ -20,6 +20,7 @@ const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Portal = lazy(() => import("./pages/Portal"));
+const Branding = lazy(() => import("./pages/Branding"));
 
 const RouteFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
@@ -124,6 +125,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AuditLogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/branding"
+            element={
+              <ProtectedRoute>
+                <Branding />
               </ProtectedRoute>
             }
           />
