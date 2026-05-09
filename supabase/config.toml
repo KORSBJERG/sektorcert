@@ -15,6 +15,15 @@ verify_jwt = true
 [functions.cvr-lookup]
 verify_jwt = true
 
+[functions.m365-branding-extract]
+verify_jwt = true
+
+[functions.m365-branding-generate-bg]
+verify_jwt = true
+
+[functions.m365-branding-fetch-image]
+verify_jwt = true
+
 [functions.generate-assessment-pdf]
 verify_jwt = true
 
