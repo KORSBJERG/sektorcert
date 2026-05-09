@@ -30,6 +30,7 @@ async function fetchAll(path: string, auth: string) {
       json.billing_reports ??
       json.reports ??
       json.organizations ??
+      json.identities ??
       json.data ??
       [];
     if (!Array.isArray(items)) return items;
