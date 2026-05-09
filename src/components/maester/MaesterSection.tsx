@@ -39,10 +39,19 @@ import {
   AlertCircle,
   Trash2,
   ExternalLink,
+  Terminal,
+  Copy,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { toast } from "sonner";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const SEVERITY_ORDER: Array<"critical" | "high" | "medium" | "low" | "info"> = [
   "critical",
@@ -51,6 +60,139 @@ const SEVERITY_ORDER: Array<"critical" | "high" | "medium" | "low" | "info"> = [
   "low",
   "info",
 ];
+
+/* -------------------------------------------------------------------------- */
+/*  Maester PowerShell commands                                                */
+/* -------------------------------------------------------------------------- */
+
+const MAESTER_COMMANDS: Array<{ title: string; description: string; cmd: string }> = [
+  {
+    title: "1. Installér Pester",
+    description: "Test-frameworket Maester bygger ovenpå.",
+    cmd: "Install-Module Pester -SkipPublisherCheck -Force -Scope CurrentUser",
+  },
+  {
+    title: "2. Installér Maester",
+    description: "Selve Maester-modulet fra PowerShell Gallery.",
+    cmd: "Install-Module Maester -Scope CurrentUser",
+  },
+  {
+    title: "3. Opret test-mappe",
+    description: "Mappen hvor Maester-tests og resultater placeres.",
+    cmd: "md maester-tests\ncd maester-tests",
+  },
+  {
+    title: "4. Installér Maester-tests",
+    description: "Henter de nyeste indbyggede tests.",
+    cmd: "Install-MaesterTests",
+  },
+  {
+    title: "5. Installér M365-moduler",
+    description: "Nødvendige moduler for at kunne forbinde til Entra, Exchange og Teams.",
+    cmd: "Install-Module Az.Accounts, ExchangeOnlineManagement, MicrosoftTeams -Scope CurrentUser",
+  },
+  {
+    title: "6. Forbind til alle services",
+    description: "Logger ind på alle relevante M365-services på én gang.",
+    cmd: "Connect-Maester -Service All",
+  },
+  {
+    title: "6b. (Alternativt) Standard-forbindelse",
+    description: "Hvis du kun vil køre standard-tests.",
+    cmd: "Connect-Maester",
+  },
+  {
+    title: "7. Kør Maester",
+    description: "Kører testene og genererer TestResults.json + .html som du uploader herover.",
+    cmd: "Invoke-Maester",
+  },
+];
+
+const ALL_COMMANDS_SCRIPT = MAESTER_COMMANDS.map((c) => `# ${c.title}\n${c.cmd}`).join("\n\n");
+
+function CopyButton({ text, label = "Kopiér" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-2 h-8"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          toast.success("Kopieret til udklipsholderen");
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          toast.error("Kunne ikke kopiere");
+        }
+      }}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {label}
+    </Button>
+  );
+}
+
+function MaesterCommandsCard() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="mb-4">
+      <div className="rounded-lg border bg-card">
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-center gap-3 text-left">
+              <Terminal className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-sm">PowerShell-kommandoer for at køre Maester</p>
+                <p className="text-xs text-muted-foreground">
+                  Klik for at se og kopiere kommandoerne der skal afvikles lokalt.
+                </p>
+              </div>
+            </div>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-xs text-muted-foreground">
+                Kør kommandoerne i rækkefølge i en <strong>PowerShell 7</strong>-terminal på en
+                administrators maskine.
+              </p>
+              <CopyButton text={ALL_COMMANDS_SCRIPT} label="Kopiér alle" />
+            </div>
+            <div className="space-y-2">
+              {MAESTER_COMMANDS.map((c) => (
+                <div
+                  key={c.title}
+                  className="rounded-md border bg-background/50 p-3 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{c.title}</p>
+                      <p className="text-xs text-muted-foreground">{c.description}</p>
+                    </div>
+                    <CopyButton text={c.cmd} />
+                  </div>
+                  <pre className="text-xs bg-muted/60 rounded px-3 py-2 overflow-x-auto font-mono">
+                    {c.cmd}
+                  </pre>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Når <code>Invoke-Maester</code> er kørt færdigt, ligger <code>TestResults.json</code>{" "}
+              (og <code>TestResults.html</code>) i <code>maester-tests</code>. Upload dem herover.
+            </p>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 interface MaesterRun {
   id: string;
