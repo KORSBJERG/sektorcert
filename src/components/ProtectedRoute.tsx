@@ -48,8 +48,10 @@ const ProtectedRoute = ({ children, allowCustomer = false }: ProtectedRouteProps
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
 
-      // Fire-and-forget: keep profile table in sync for users that sign in with OAuth.
-      void ensureProfile(session);
+      // Defer any supabase calls to avoid auth-lock deadlock inside the listener.
+      setTimeout(() => {
+        void ensureProfile(session);
+      }, 0);
     });
 
     return () => subscription.unsubscribe();
