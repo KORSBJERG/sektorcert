@@ -32,6 +32,7 @@ import { MaesterSection } from "@/components/maester/MaesterSection";
 import { RecommendationsHeatmap } from "@/components/RecommendationsHeatmap";
 import { InviteCustomerDialog } from "@/components/InviteCustomerDialog";
 import { CustomerDocuments } from "@/components/CustomerDocuments";
+import { DataProcessingAgreementSection } from "@/components/DataProcessingAgreementSection";
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -264,6 +265,7 @@ const CustomerDetail = () => {
         supabase.from("security_reports").delete().eq("customer_id", id),
         supabase.from("huntress_sync_data").delete().eq("customer_id", id),
         supabase.from("maester_runs").delete().eq("customer_id", id),
+        supabase.from("data_processing_agreements").delete().eq("customer_id", id),
       ]);
 
       const { error } = await supabase.from("customers").delete().eq("id", id);
@@ -392,6 +394,11 @@ const CustomerDetail = () => {
         {/* Emergency Plan Section */}
         <Card className="mb-6 p-6 shadow-elevated">
           <EmergencyPlanSection customerId={id!} customerName={customer.name} />
+        </Card>
+
+        {/* Data Processing Agreements */}
+        <Card className="mb-6 p-6 shadow-elevated">
+          <DataProcessingAgreementSection customer={customer as any} />
         </Card>
 
         {/* NIS2 Security Plan Section */}
