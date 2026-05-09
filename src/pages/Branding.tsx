@@ -159,6 +159,89 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+async function composeLoginBackground(
+  bgSrc: string,
+  options: {
+    companyName: string;
+    logoSrc?: string | null;
+    accentColor?: string;
+  },
+): Promise<string> {
+  const W = 1920;
+  const H = 1080;
+  const { companyName, logoSrc, accentColor = "#ffffff" } = options;
+  const bg = await loadImage(bgSrc);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // cover-draw background
+  const ratio = bg.width / bg.height;
+  let dw: number, dh: number;
+  if (ratio > W / H) {
+    dh = H;
+    dw = dh * ratio;
+  } else {
+    dw = W;
+    dh = dw / ratio;
+  }
+  ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+  // Left-side dark overlay for legibility (sign-in dialog sits on the right)
+  const grad = ctx.createLinearGradient(0, 0, W * 0.7, 0);
+  grad.addColorStop(0, "rgba(0,0,0,0.55)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const padX = 120;
+  let cursorY = H / 2 - 60;
+
+  // Logo (top of brand block)
+  if (logoSrc) {
+    try {
+      const logo = await loadImage(logoSrc);
+      const maxW = 360;
+      const maxH = 180;
+      const lr = logo.width / logo.height;
+      let lw = maxW;
+      let lh = lw / lr;
+      if (lh > maxH) {
+        lh = maxH;
+        lw = lh * lr;
+      }
+      // soft shadow for contrast on any background
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowBlur = 24;
+      ctx.drawImage(logo, padX, cursorY - lh, lw, lh);
+      ctx.restore();
+      cursorY += 40;
+    } catch (e) {
+      console.warn("Could not draw logo on background", e);
+    }
+  }
+
+  // Company name
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.6)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = accentColor;
+  ctx.font = "700 84px 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillText(companyName, padX, cursorY);
+  ctx.restore();
+
+  // Accent underline
+  ctx.fillStyle = accentColor;
+  ctx.fillRect(padX, cursorY + 110, 120, 6);
+
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
 const Branding = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
