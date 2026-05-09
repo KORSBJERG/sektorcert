@@ -629,9 +629,14 @@ Upload disse i Microsoft Entra > Company branding.`;
 
         <div className="text-xs text-muted-foreground">
           Tip: I Microsoft Entra åbner du{" "}
-          <Link to="https://entra.microsoft.com" target="_blank" className="underline">
+          <a
+            href="https://entra.microsoft.com"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
             entra.microsoft.com
-          </Link>{" "}
+          </a>{" "}
           → Company branding → og uploader filerne fra .zip’en.
         </div>
       </main>
