@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, FileText, Trash2, Copy } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Trash2, Copy, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { useState } from "react";
@@ -42,6 +42,8 @@ const CustomerDetail = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
   const [creatingRevision, setCreatingRevision] = useState<string | null>(null);
+  const [deleteCustomerOpen, setDeleteCustomerOpen] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ["customer", id],
@@ -235,6 +237,55 @@ const CustomerDetail = () => {
     }
   };
 
+  const handleDeleteCustomer = async () => {
+    if (!id) return;
+    setDeletingCustomer(true);
+    try {
+      // Delete dependent rows first (no FK cascade configured).
+      // Assessment items via assessment ids
+      const { data: assessmentRows } = await supabase
+        .from("assessments")
+        .select("id")
+        .eq("customer_id", id);
+      const assessmentIds = (assessmentRows ?? []).map((a) => a.id);
+      if (assessmentIds.length > 0) {
+        await supabase.from("assessment_items").delete().in("assessment_id", assessmentIds);
+      }
+
+      // Best-effort delete of related rows. Errors are tolerated so the customer
+      // delete still proceeds when a table has no rows for this customer.
+      await Promise.all([
+        supabase.from("assessments").delete().eq("customer_id", id),
+        supabase.from("customer_documents").delete().eq("customer_id", id),
+        supabase.from("customer_invitations").delete().eq("customer_id", id),
+        supabase.from("customer_users").delete().eq("customer_id", id),
+        supabase.from("emergency_plans").delete().eq("customer_id", id),
+        supabase.from("nis2_plans").delete().eq("customer_id", id),
+        supabase.from("security_reports").delete().eq("customer_id", id),
+        supabase.from("huntress_sync_data").delete().eq("customer_id", id),
+        supabase.from("maester_runs").delete().eq("customer_id", id),
+      ]);
+
+      const { error } = await supabase.from("customers").delete().eq("id", id);
+      if (error) throw error;
+
+      toast({
+        title: "Kunde slettet",
+        description: `${customer?.name ?? "Kunden"} og alle tilhørende data er slettet.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Fejl",
+        description: error.message || "Kunden kunne ikke slettes.",
+        variant: "destructive",
+      });
+      setDeletingCustomer(false);
+      setDeleteCustomerOpen(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-hero">
@@ -278,6 +329,14 @@ const CustomerDetail = () => {
               >
                 <Plus className="h-4 w-4" />
                 Ny Vurdering
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteCustomerOpen(true)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Slet kunde
               </Button>
             </div>
           </div>
@@ -478,6 +537,35 @@ const CustomerDetail = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Slet
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={deleteCustomerOpen} onOpenChange={setDeleteCustomerOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Slet kunde permanent?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Du er ved at slette <strong>{customer.name}</strong> og <strong>alle</strong> tilhørende data:
+                vurderinger, sikkerhedsrapporter, beredskabsplaner, NIS2-planer, dokumenter,
+                Huntress-sync, Maester-kørsler og invitationer. Denne handling kan ikke fortrydes.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingCustomer}>Annuller</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteCustomer();
+                }}
+                disabled={deletingCustomer}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletingCustomer ? "Sletter..." : "Slet kunde permanent"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
