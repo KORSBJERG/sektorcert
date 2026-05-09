@@ -13,6 +13,7 @@
  import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
  import { User, Settings, LogOut, Loader2 } from "lucide-react";
  import { toast } from "sonner";
+import { GlobalSearchTrigger } from "@/components/GlobalSearch";
  
  interface Profile {
    display_name: string | null;
@@ -91,7 +92,9 @@
      .slice(0, 2);
  
    return (
-     <DropdownMenu>
+    <div className="flex items-center gap-2">
+      <GlobalSearchTrigger />
+      <DropdownMenu>
        <DropdownMenuTrigger asChild>
          <Button variant="ghost" className="relative h-9 w-9 rounded-full">
            <Avatar className="h-9 w-9">
@@ -130,7 +133,8 @@
            <span>Log ud</span>
          </DropdownMenuItem>
        </DropdownMenuContent>
-     </DropdownMenu>
+      </DropdownMenu>
+    </div>
    );
  };
  
