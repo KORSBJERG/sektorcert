@@ -31,7 +31,13 @@ export const useUserRole = () => {
       setLoading(false);
     };
     load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      // Defer to avoid Supabase auth lock deadlock when calling
+      // other supabase methods inside the onAuthStateChange callback.
+      setTimeout(() => {
+        if (!cancelled) load();
+      }, 0);
+    });
     return () => {
       cancelled = true;
       subscription.unsubscribe();
