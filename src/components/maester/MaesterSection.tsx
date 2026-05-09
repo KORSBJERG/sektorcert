@@ -583,6 +583,8 @@ export function MaesterSection({ customerId }: { customerId: string }) {
         <MaesterUploadDialog customerId={customerId} />
       </div>
 
+      <MaesterCommandsCard />
+
       {isLoading ? (
         <div className="flex items-center gap-2 text-muted-foreground py-6">
           <Loader2 className="h-4 w-4 animate-spin" /> Indlæser...
