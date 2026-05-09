@@ -20,6 +20,8 @@ import {
   Pencil,
   Check,
   X,
+  Globe,
+  ImageIcon,
 } from "lucide-react";
 
 interface CustomerContactInfoProps {
@@ -31,6 +33,8 @@ interface CustomerContactInfoProps {
     contact_email: string | null;
     contact_phone: string | null;
     operation_type: string;
+    website?: string | null;
+    logo_url?: string | null;
   };
 }
 
@@ -59,12 +63,36 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
     contact_person: customer.contact_person || "",
     contact_email: customer.contact_email || "",
     contact_phone: customer.contact_phone || "",
+    website: customer.website || "",
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Normalize and derive a domain (e.g. "https://www.acme.dk/about" -> "acme.dk")
+  const deriveDomain = (raw: string): string | null => {
+    if (!raw) return null;
+    let v = raw.trim();
+    if (!/^https?:\/\//i.test(v)) v = "https://" + v;
+    try {
+      const u = new URL(v);
+      return u.hostname.replace(/^www\./i, "");
+    } catch {
+      return null;
+    }
+  };
+
+  const buildLogoUrl = (website: string): string | null => {
+    const domain = deriveDomain(website);
+    if (!domain) return null;
+    // Google's favicon-service – gratis, ingen API-nøgle, fungerer for de fleste websites
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+  };
+
   const updateMutation = useMutation({
     mutationFn: async (data: typeof editData) => {
+      const newLogoUrl = data.website
+        ? buildLogoUrl(data.website)
+        : null;
       const { error } = await supabase
         .from("customers")
         .update({
@@ -73,6 +101,8 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
           contact_person: data.contact_person || null,
           contact_email: data.contact_email || null,
           contact_phone: data.contact_phone || null,
+          website: data.website || null,
+          logo_url: newLogoUrl,
         })
         .eq("id", customer.id);
       if (error) throw error;
@@ -80,7 +110,9 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
     onSuccess: () => {
       toast({
         title: "Opdateret",
-        description: "Kontaktoplysninger er gemt",
+        description: editData.website
+          ? "Kontaktoplysninger gemt – logo hentet fra hjemmesiden"
+          : "Kontaktoplysninger er gemt",
       });
       queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
       setIsEditing(false);
@@ -101,6 +133,7 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
       contact_person: customer.contact_person || "",
       contact_email: customer.contact_email || "",
       contact_phone: customer.contact_phone || "",
+      website: customer.website || "",
     });
     setIsEditing(true);
   };
@@ -194,7 +227,18 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
     <Card className="p-6 shadow-elevated">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-primary" />
+          {customer.logo_url ? (
+            <img
+              src={customer.logo_url}
+              alt={`${customer.name} logo`}
+              className="h-8 w-8 rounded object-contain bg-background border"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            <Building2 className="h-5 w-5 text-primary" />
+          )}
           <h2 className="text-xl font-semibold text-foreground">Kontaktoplysninger</h2>
         </div>
         {!isEditing ? (
@@ -402,6 +446,19 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
                 />
               </div>
             </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/30 md:col-span-2">
+              <Globe className="h-5 w-5 text-primary mt-2" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  Hjemmeside <span className="text-muted-foreground/70">(logo hentes automatisk når du gemmer)</span>
+                </p>
+                <Input
+                  value={editData.website}
+                  onChange={(e) => setEditData({ ...editData, website: e.target.value })}
+                  placeholder="https://eksempel.dk"
+                />
+              </div>
+            </div>
           </>
         ) : (
           <>
@@ -438,6 +495,40 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Telefon</p>
                 <p className="text-foreground">{customer.contact_phone || "Ikke angivet"}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/30 md:col-span-2">
+              <Globe className="h-5 w-5 text-primary mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Hjemmeside</p>
+                {customer.website ? (
+                  <div className="flex items-center gap-3">
+                    {customer.logo_url && (
+                      <img
+                        src={customer.logo_url}
+                        alt="Logo"
+                        className="h-6 w-6 rounded object-contain bg-background border shrink-0"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                    <a
+                      href={
+                        /^https?:\/\//i.test(customer.website)
+                          ? customer.website
+                          : `https://${customer.website}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline truncate"
+                    >
+                      {customer.website}
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-foreground">Ikke angivet</p>
+                )}
               </div>
             </div>
           </>
