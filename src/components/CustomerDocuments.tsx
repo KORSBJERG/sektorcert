@@ -233,7 +233,7 @@ export const CustomerDocuments = ({ customerId, canUpload = true }: Props) => {
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" onClick={() => handleDownload(doc.file_path, doc.file_name)} title="Download">
+                          <Button size="icon" variant="ghost" onClick={() => handleDownload(doc.id, doc.file_path, doc.file_name)} title="Download">
                             <Download className="h-4 w-4" />
                           </Button>
                           {canUpload && (
