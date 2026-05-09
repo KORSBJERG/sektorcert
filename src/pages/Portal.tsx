@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LogOut, FileText, Shield, Siren, ListChecks, BarChart3 } from "lucide-react";
+import { CustomerDocuments } from "@/components/CustomerDocuments";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 
@@ -188,6 +189,10 @@ const Portal = () => {
                     subtitle: `Opdateret ${format(new Date(p.updated_at), "d. MMM yyyy", { locale: da })}`,
                   }))}
                 />
+              </div>
+
+              <div className="mt-6 border-t border-border pt-6">
+                <CustomerDocuments customerId={customer.id} canUpload={false} />
               </div>
             </Card>
           );
