@@ -165,7 +165,7 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
 
       if (data.error) {
         toast({
-          title: "Ikke fundet",
+          title: data.code === "QUOTA_EXCEEDED" ? "CVR opslag midlertidigt utilgængeligt" : "Ikke fundet",
           description: data.error,
           variant: "destructive",
         });
@@ -181,7 +181,7 @@ export const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
       console.error("CVR lookup error:", error);
       toast({
         title: "Fejl",
-        description: "Der opstod en fejl ved CVR opslag",
+        description: "CVR opslag fejlede. Prøv igen senere eller udfyld oplysningerne manuelt.",
         variant: "destructive",
       });
     } finally {
