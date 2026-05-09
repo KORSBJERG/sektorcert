@@ -83,12 +83,37 @@ export const HuntressImportDialog = () => {
           huntress_organization_id: String(o.id),
           created_by_user_id: user.id,
         }));
-      const { error } = await supabase.from("customers").insert(rows);
+      const { data: inserted, error } = await supabase
+        .from("customers")
+        .insert(rows)
+        .select("id");
       if (error) throw error;
-      toast({ title: "Importeret", description: `${rows.length} kunde(r) oprettet fra Huntress.` });
+      toast({ title: "Importeret", description: `${rows.length} kunde(r) oprettet. Henter Huntress-data…` });
       qc.invalidateQueries({ queryKey: ["customers"] });
       setSelected(new Set());
       setOpen(false);
+
+      // Fire-and-forget auto-sync of Huntress data for the newly imported customers
+      const ids = (inserted ?? []).map((r: any) => r.id);
+      if (ids.length) {
+        supabase.functions
+          .invoke("huntress-sync-all", { body: { customerIds: ids } })
+          .then(({ data, error: syncErr }) => {
+            if (syncErr || data?.error) {
+              toast({
+                title: "Huntress-sync fejlede",
+                description: syncErr?.message || data?.error,
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Huntress-data hentet",
+                description: `${data?.synced ?? 0} af ${data?.total ?? ids.length} kunder synkroniseret.`,
+              });
+              qc.invalidateQueries({ queryKey: ["huntress-live"] });
+            }
+          });
+      }
     } catch (e: any) {
       toast({ title: "Fejl", description: e.message, variant: "destructive" });
     } finally {
