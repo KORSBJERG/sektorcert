@@ -21,7 +21,8 @@ async function fetchAll(path: string, auth: string) {
     const json = await r.json();
     const items =
       json.agents ?? json.incident_reports ?? json.summary_reports ??
-      json.billing_reports ?? json.reports ?? json.organizations ?? json.data ?? [];
+      json.billing_reports ?? json.reports ?? json.organizations ??
+      json.identities ?? json.data ?? [];
     if (!Array.isArray(items)) return items;
     all.push(...items);
     const pagination = json.pagination;
@@ -41,20 +42,38 @@ async function fetchOne(path: string, auth: string) {
 }
 
 async function syncOne(supabase: any, userId: string, auth: string, customerId: string, orgId: string) {
-  const [organization, agents, incidents, summaries, billing] = await Promise.all([
+  const [organization, agents, incidents, summaries, billing, identities] = await Promise.all([
     fetchOne(`/organizations/${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
     fetchAll(`/agents?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
     fetchAll(`/incident_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
     fetchAll(`/summary_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
     fetchAll(`/billing_reports?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
+    fetchAll(`/identities?organization_id=${encodeURIComponent(orgId)}`, auth).catch((e) => ({ error: String(e) })),
   ]);
   const orgPayload = (organization as any)?.organization ?? organization;
+  const identitiesArr = Array.isArray(identities) ? identities : [];
+  if (identitiesArr.length > 0 && orgPayload && !(orgPayload as any).error) {
+    const truthy = (v: any) =>
+      v === true || v === 1 || (typeof v === "string" && ["true", "yes", "enabled", "enforced"].includes(v.toLowerCase()));
+    const mfaEnabled = identitiesArr.filter((i: any) =>
+      truthy(i?.mfa_enabled ?? i?.mfa ?? i?.has_mfa ?? i?.mfa_enforced)
+    ).length;
+    const admins = identitiesArr.filter((i: any) => truthy(i?.is_admin ?? i?.admin)).length;
+    const adminsWithMfa = identitiesArr.filter(
+      (i: any) => truthy(i?.is_admin ?? i?.admin) && truthy(i?.mfa_enabled ?? i?.mfa ?? i?.has_mfa ?? i?.mfa_enforced)
+    ).length;
+    (orgPayload as any).mfa_enabled_count = mfaEnabled;
+    (orgPayload as any).identity_count = identitiesArr.length;
+    (orgPayload as any).admin_count = admins;
+    (orgPayload as any).admin_mfa_enabled_count = adminsWithMfa;
+  }
   const rows = [
     { customer_id: customerId, sync_type: "organization", data: { item: orgPayload }, created_by_user_id: userId },
     { customer_id: customerId, sync_type: "agents", data: { items: agents }, created_by_user_id: userId },
     { customer_id: customerId, sync_type: "incidents", data: { items: incidents }, created_by_user_id: userId },
     { customer_id: customerId, sync_type: "summary", data: { items: summaries }, created_by_user_id: userId },
     { customer_id: customerId, sync_type: "billing", data: { items: billing }, created_by_user_id: userId },
+    { customer_id: customerId, sync_type: "identities", data: { items: identitiesArr }, created_by_user_id: userId },
   ];
   const { error } = await supabase.from("huntress_sync_data").insert(rows);
   if (error) throw error;
@@ -63,6 +82,7 @@ async function syncOne(supabase: any, userId: string, auth: string, customerId: 
     incidents: Array.isArray(incidents) ? incidents.length : 0,
     summaries: Array.isArray(summaries) ? summaries.length : 0,
     billing: Array.isArray(billing) ? billing.length : 0,
+    identities: identitiesArr.length,
   };
 }
 
