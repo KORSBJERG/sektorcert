@@ -168,6 +168,7 @@ export type Database = {
           record_id: string
           table_name: string
           timestamp: string
+          user_agent: string | null
           user_id: string | null
         }
         Insert: {
@@ -180,6 +181,7 @@ export type Database = {
           record_id: string
           table_name: string
           timestamp?: string
+          user_agent?: string | null
           user_id?: string | null
         }
         Update: {
@@ -192,6 +194,7 @@ export type Database = {
           record_id?: string
           table_name?: string
           timestamp?: string
+          user_agent?: string | null
           user_id?: string | null
         }
         Relationships: []
