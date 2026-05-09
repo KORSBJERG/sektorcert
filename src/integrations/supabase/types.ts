@@ -196,6 +196,51 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_documents: {
+        Row: {
+          category: string
+          created_at: string
+          customer_id: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          title: string
+          updated_at: string
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by_user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by_user_id?: string
+        }
+        Relationships: []
+      }
       customer_invitations: {
         Row: {
           accepted_at: string | null
