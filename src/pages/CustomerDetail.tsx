@@ -330,6 +330,14 @@ const CustomerDetail = () => {
                 <Plus className="h-4 w-4" />
                 Ny Vurdering
               </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteCustomerOpen(true)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Slet kunde
+              </Button>
             </div>
           </div>
         </div>
@@ -529,6 +537,35 @@ const CustomerDetail = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Slet
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={deleteCustomerOpen} onOpenChange={setDeleteCustomerOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Slet kunde permanent?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Du er ved at slette <strong>{customer.name}</strong> og <strong>alle</strong> tilhørende data:
+                vurderinger, sikkerhedsrapporter, beredskabsplaner, NIS2-planer, dokumenter,
+                Huntress-sync, Maester-kørsler og invitationer. Denne handling kan ikke fortrydes.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingCustomer}>Annuller</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteCustomer();
+                }}
+                disabled={deletingCustomer}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletingCustomer ? "Sletter..." : "Slet kunde permanent"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
