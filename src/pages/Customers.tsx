@@ -1,12 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, ArrowLeft, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, ArrowLeft, Building2, Mail, Phone, MapPin, RefreshCw } from "lucide-react";
 import { HuntressImportDialog } from "@/components/HuntressImportDialog";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Customers = () => {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [syncing, setSyncing] = useState(false);
+
   const { data: customers, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
@@ -18,6 +24,27 @@ const Customers = () => {
       return data;
     },
   });
+
+  const huntressCount = customers?.filter((c: any) => c.huntress_organization_id).length ?? 0;
+
+  const handleSyncAll = async () => {
+    setSyncing(true);
+    toast({ title: "Synkroniserer Huntress…", description: `${huntressCount} kunder` });
+    try {
+      const { data, error } = await supabase.functions.invoke("huntress-sync-all", { body: {} });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Huntress-data opdateret",
+        description: `${data.synced} af ${data.total} synkroniseret${data.failed ? ` (${data.failed} fejlede)` : ""}.`,
+      });
+      qc.invalidateQueries({ queryKey: ["huntress-live"] });
+    } catch (e: any) {
+      toast({ title: "Fejl", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -34,6 +61,12 @@ const Customers = () => {
               <h1 className="text-2xl font-bold text-foreground">Alle Kunder</h1>
             </div>
             <div className="flex items-center gap-2">
+              {huntressCount > 0 && (
+                <Button variant="outline" className="gap-2" onClick={handleSyncAll} disabled={syncing}>
+                  <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Synkroniserer…" : `Sync Huntress (${huntressCount})`}
+                </Button>
+              )}
               <HuntressImportDialog />
               <Link to="/customers/new">
                 <Button className="gap-2 bg-gradient-primary hover:opacity-90">
