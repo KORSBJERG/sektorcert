@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,11 +55,21 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function isSafeLogoUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'data:';
+  } catch {
+    return false;
+  }
+}
+
 function generateHtml(plan: EmergencyPlan, customerName: string, customerLogo?: string): string {
   const enabledMeasures = (plan.security_measures || []).filter(m => m.enabled);
-  
-  const logoSection = customerLogo 
-    ? `<img src="${customerLogo}" alt="${escapeHtml(customerName)} logo" class="logo" />`
+  const safeLogo = customerLogo && isSafeLogoUrl(customerLogo) ? customerLogo : null;
+
+  const logoSection = safeLogo
+    ? `<img src="${escapeHtml(safeLogo)}" alt="${escapeHtml(customerName)} logo" class="logo" />`
     : `<div class="logo-placeholder">${escapeHtml(customerName.charAt(0))}</div>`;
 
   return `
@@ -501,6 +512,24 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { plan, customerName, customerLogo } = await req.json() as RequestBody;
 
     if (!plan || !customerName) {
