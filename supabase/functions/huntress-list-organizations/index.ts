@@ -10,13 +10,6 @@ const basicAuth = (k: string, s: string) => "Basic " + btoa(`${k}:${s}`);
 
 const normalizeSecret = (value: string) => value.trim().replace(/^['\"]+|['\"]+$/g, "");
 
-const credentialMeta = (value: string) => ({
-  length: value.length,
-  prefix: value.slice(0, 3),
-  hasLeadingOrTrailingWhitespace: value !== value.trim(),
-  wrappedInQuotes: /^['\"].*['\"]$/.test(value),
-});
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -49,13 +42,6 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    console.log("huntress-list-organizations auth meta", {
-      apiKey: credentialMeta(rawApiKey ?? ""),
-      apiSecret: credentialMeta(rawApiSecret ?? ""),
-      normalizedKeyPrefix: apiKey.slice(0, 3),
-      normalizedSecretPrefix: apiSecret.slice(0, 3),
-    });
 
     const all: any[] = [];
     let page = 1;
