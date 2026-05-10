@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +47,15 @@ function formatDate(dateStr: string | null): string {
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isSafeLogoUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'data:';
+  } catch {
+    return false;
+  }
 }
 
 function getStatusLabel(status: string): string {
@@ -100,8 +110,9 @@ function generateHtml(plan: NIS2Plan, customerName: string, customerLogo?: strin
   const overallProgress = getOverallProgress(categories);
   const nistPhases = getNistMapping();
 
-  const logoSection = customerLogo
-    ? `<img src="${customerLogo}" alt="${escapeHtml(customerName)} logo" class="logo" />`
+  const safeLogo = customerLogo && isSafeLogoUrl(customerLogo) ? customerLogo : null;
+  const logoSection = safeLogo
+    ? `<img src="${escapeHtml(safeLogo)}" alt="${escapeHtml(customerName)} logo" class="logo" />`
     : `<div class="logo-placeholder">${escapeHtml(customerName.charAt(0))}</div>`;
 
   const categoriesHtml = categories.map(cat => {
@@ -339,6 +350,24 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { plan, customerName, customerLogo } = await req.json();
     if (!plan) throw new Error("Plan data is required");
 

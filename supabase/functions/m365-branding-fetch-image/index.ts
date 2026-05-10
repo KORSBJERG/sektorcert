@@ -7,16 +7,28 @@ const corsHeaders = {
 };
 
 function isPrivateIp(hostname: string): boolean {
-  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  const h = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
   if (/^127\./.test(hostname)) return true;
   if (/^10\./.test(hostname)) return true;
   if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) return true;
   if (/^192\.168\./.test(hostname)) return true;
   if (/^169\.254\./.test(hostname)) return true;
   if (/^0\./.test(hostname)) return true;
-  if (/^::1$/.test(hostname)) return true;
-  if (/^fc00:/i.test(hostname)) return true;
-  if (/^fe80:/i.test(hostname)) return true;
+  if (/^::1$/.test(h)) return true;
+  if (/^fc00:/i.test(h) || /^fd[0-9a-f]{2}:/i.test(h)) return true;
+  if (/^fe80:/i.test(h)) return true;
+  if (/^::ffff:127\./i.test(h)) return true;
+  if (/^::ffff:10\./i.test(h)) return true;
+  if (/^::ffff:192\.168\./i.test(h)) return true;
+  if (/^::ffff:172\.(1[6-9]|2[0-9]|3[0-1])\./i.test(h)) return true;
+  if (/^::ffff:169\.254\./i.test(h)) return true;
+  if (/^::ffff:0\./i.test(h)) return true;
+  // Reject non-dotted hostnames that could be decimal/hex IPs or other oddities
+  if (!/^[a-z0-9.\-:[\]]+$/i.test(hostname)) return true;
+  // Pure-numeric hostnames (decimal/hex IP encodings)
+  if (/^[0-9]+$/.test(hostname)) return true;
+  if (/^0x[0-9a-f]+$/i.test(hostname)) return true;
   return false;
 }
 
