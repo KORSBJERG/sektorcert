@@ -120,6 +120,15 @@ serve(async (req) => {
   }
 });
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): string {
   const date = new Date(report.created_at).toLocaleDateString("da-DK", {
     year: "numeric",
