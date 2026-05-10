@@ -110,6 +110,15 @@ serve(async (req) => {
   }
 });
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[]): string {
   const date = new Date(assessment.assessment_date).toLocaleDateString("da-DK", {
     year: "numeric",
