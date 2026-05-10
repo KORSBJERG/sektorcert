@@ -122,11 +122,35 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     const { url } = await req.json();
     if (!url || typeof url !== "string") {
       return json({ error: "URL er påkrævet" }, 400);
     }
     const target = normalizeUrl(url);
+
+    try {
+      const parsed = new URL(target);
+      if (isPrivateIp(parsed.hostname)) {
+        return json({ error: "Interne adresser er ikke tilladt" }, 400);
+      }
+    } catch {
+      return json({ error: "Ugyldig URL" }, 400);
+    }
 
     const res = await fetch(target, {
       headers: { "User-Agent": "Mozilla/5.0 PEAKNET-Branding/1.0" },
