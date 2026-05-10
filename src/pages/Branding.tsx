@@ -287,12 +287,28 @@ const Branding = () => {
       const { data, error } = await supabase.functions.invoke("m365-branding-fetch-image", {
         body: { url: logoUrl },
       });
-      if (error) throw error;
-      return (data as { dataUrl?: string }).dataUrl ?? null;
+      if (error) {
+        console.warn("fetchLogo failed", logoUrl, error);
+        return null;
+      }
+      const payload = data as { dataUrl?: string; error?: string };
+      if (payload?.error) {
+        console.warn("fetchLogo payload error", logoUrl, payload.error);
+        return null;
+      }
+      return payload?.dataUrl ?? null;
     } catch (e) {
-      console.error(e);
+      console.warn("fetchLogo exception", logoUrl, e);
       return null;
     }
+  };
+
+  const fetchFirstAvailableLogo = async (urls: string[]): Promise<{ url: string; dataUrl: string; index: number } | null> => {
+    for (let i = 0; i < urls.length; i++) {
+      const dataUrl = await fetchLogo(urls[i]);
+      if (dataUrl) return { url: urls[i], dataUrl, index: i };
+    }
+    return null;
   };
 
   const handleExtract = async () => {
@@ -317,8 +333,13 @@ const Branding = () => {
       if (!companyName && result.title) setCompanyName(result.title.split("|")[0].trim());
       if (!description && result.description) setDescription(result.description);
       if (result.logos.length > 0) {
-        const dataUrl = await fetchLogo(result.logos[0]);
-        if (dataUrl) setLogoDataUrl(dataUrl);
+        const found = await fetchFirstAvailableLogo(result.logos);
+        if (found) {
+          setLogoDataUrl(found.dataUrl);
+          setChosenLogoIndex(found.index);
+        } else {
+          toast.warning("Logoer kunne ikke hentes — prøv at vælge manuelt eller upload selv");
+        }
       }
       toast.success("Brand-info hentet");
     } catch (e: any) {
