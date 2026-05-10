@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import DOMPurify from "dompurify";
 
 interface Props {
   open: boolean;
@@ -115,7 +116,7 @@ export const HuntressDetailDialog = ({ open, onOpenChange, customerId, kind, id,
                   <p className="text-xs text-muted-foreground mb-1">Beskrivelse</p>
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none text-sm rounded border border-border p-3 bg-muted/20"
-                    dangerouslySetInnerHTML={{ __html: String(incident.body) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(String(incident.body)) }}
                   />
                 </div>
               )}

@@ -110,6 +110,15 @@ serve(async (req) => {
   }
 });
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[]): string {
   const date = new Date(assessment.assessment_date).toLocaleDateString("da-DK", {
     year: "numeric",
@@ -139,17 +148,17 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
         <div style="background: #3b82f6; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px;">
           ${item.recommendations.number}
         </div>
-        <h3 style="margin: 0; font-size: 20px; color: #1e293b;">${item.recommendations.title}</h3>
+        <h3 style="margin: 0; font-size: 20px; color: #1e293b;">${escapeHtml(item.recommendations.title)}</h3>
       </div>
 
       <div style="margin-bottom: 12px;">
         <p style="margin: 0 0 8px 0; color: #64748b; font-size: 14px;"><strong>Beskrivelse:</strong></p>
-        <p style="margin: 0; color: #475569; font-size: 14px;">${item.recommendations.description}</p>
+        <p style="margin: 0; color: #475569; font-size: 14px;">${escapeHtml(item.recommendations.description)}</p>
       </div>
 
       <div style="margin-bottom: 12px;">
         <p style="margin: 0 0 8px 0; color: #64748b; font-size: 14px;"><strong>Derfor er det vigtigt:</strong></p>
-        <p style="margin: 0; color: #475569; font-size: 14px;">${item.recommendations.importance_reason}</p>
+        <p style="margin: 0; color: #475569; font-size: 14px;">${escapeHtml(item.recommendations.importance_reason)}</p>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
@@ -170,7 +179,7 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
           ? `
       <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 6px;">
         <p style="margin: 0 0 4px 0; color: #64748b; font-size: 12px; font-weight: 600;">NOTER</p>
-        <p style="margin: 0; color: #475569; font-size: 14px;">${item.notes}</p>
+        <p style="margin: 0; color: #475569; font-size: 14px;">${escapeHtml(item.notes)}</p>
       </div>
       `
           : ""
@@ -181,7 +190,7 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
           ? `
       <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 6px;">
         <p style="margin: 0 0 4px 0; color: #92400e; font-size: 12px; font-weight: 600;">ANBEFALEDE HANDLINGER</p>
-        <p style="margin: 0; color: #78350f; font-size: 14px;">${item.recommended_actions}</p>
+        <p style="margin: 0; color: #78350f; font-size: 14px;">${escapeHtml(item.recommended_actions)}</p>
       </div>
       `
           : ""
@@ -314,7 +323,7 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
       <div class="header">
         <div class="logo">🛡️ PEAKNET & DSData</div>
         <div class="subtitle">Cybersikkerhedsvurdering</div>
-        <h1 style="margin: 24px 0 8px 0; font-size: 32px;">${assessment.customers.name}</h1>
+        <h1 style="margin: 24px 0 8px 0; font-size: 32px;">${escapeHtml(assessment.customers.name)}</h1>
         <p style="color: #64748b; margin: 0;">Baseret på 25 sikkerhedsanbefalinger</p>
       </div>
 
@@ -326,21 +335,21 @@ function generateHTMLReport(assessment: AssessmentData, items: AssessmentItem[])
           </div>
           <div class="info-item">
             <div class="info-label">KONSULENT</div>
-            <div class="info-value">${assessment.consultant_name}</div>
+            <div class="info-value">${escapeHtml(assessment.consultant_name)}</div>
           </div>
         </div>
         <div>
           <div class="info-item">
             <div class="info-label">ADRESSE</div>
-            <div class="info-value">${assessment.customers.address || "Ikke angivet"}</div>
+            <div class="info-value">${escapeHtml(assessment.customers.address || "Ikke angivet")}</div>
           </div>
           <div class="info-item">
             <div class="info-label">DRIFTSTYPE</div>
-            <div class="info-value">${assessment.customers.operation_type}</div>
+            <div class="info-value">${escapeHtml(assessment.customers.operation_type)}</div>
           </div>
           <div class="info-item">
             <div class="info-label">KONTAKTPERSON</div>
-            <div class="info-value">${assessment.customers.contact_person || "Ikke angivet"}</div>
+            <div class="info-value">${escapeHtml(assessment.customers.contact_person || "Ikke angivet")}</div>
           </div>
         </div>
       </div>

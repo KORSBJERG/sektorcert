@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,20 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+function isPrivateIp(hostname: string): boolean {
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  if (/^127\./.test(hostname)) return true;
+  if (/^10\./.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  if (/^169\.254\./.test(hostname)) return true;
+  if (/^0\./.test(hostname)) return true;
+  if (/^::1$/.test(hostname)) return true;
+  if (/^fc00:/i.test(hostname)) return true;
+  if (/^fe80:/i.test(hostname)) return true;
+  return false;
+}
 
 function normalizeUrl(input: string): string {
   let u = input.trim();
@@ -107,11 +122,35 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     const { url } = await req.json();
     if (!url || typeof url !== "string") {
       return json({ error: "URL er påkrævet" }, 400);
     }
     const target = normalizeUrl(url);
+
+    try {
+      const parsed = new URL(target);
+      if (isPrivateIp(parsed.hostname)) {
+        return json({ error: "Interne adresser er ikke tilladt" }, 400);
+      }
+    } catch {
+      return json({ error: "Ugyldig URL" }, 400);
+    }
 
     const res = await fetch(target, {
       headers: { "User-Agent": "Mozilla/5.0 PEAKNET-Branding/1.0" },

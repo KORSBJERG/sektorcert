@@ -120,6 +120,15 @@ serve(async (req) => {
   }
 });
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): string {
   const date = new Date(report.created_at).toLocaleDateString("da-DK", {
     year: "numeric",
@@ -164,11 +173,11 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
         <div style="flex: 1;">
           <p style="margin: 0 0 4px 0; font-weight: 600; color: #1e293b; font-size: 14px;">
-            ${match.report_recommendation_name}
+            ${escapeHtml(match.report_recommendation_name)}
           </p>
           ${match.recommendations ? `
             <p style="margin: 0; font-size: 12px; color: #3b82f6;">
-              → Matcher #${match.recommendations.number}: ${match.recommendations.title}
+              → Matcher #${match.recommendations.number}: ${escapeHtml(match.recommendations.title)}
             </p>
           ` : `
             <p style="margin: 0; font-size: 12px; color: #94a3b8; font-style: italic;">
@@ -178,7 +187,7 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           <div style="padding: 4px 10px; border-radius: 9999px; background: ${getStatusColor(match.report_status)}20; color: ${getStatusColor(match.report_status)}; font-size: 11px; font-weight: 600;">
-            ${match.report_status || 'Ukendt'}
+            ${escapeHtml(match.report_status || 'Ukendt')}
           </div>
           ${match.applied ? `
             <div style="padding: 4px 10px; border-radius: 9999px; background: #22c55e20; color: #22c55e; font-size: 11px; font-weight: 600;">
@@ -326,8 +335,8 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
       <div class="header">
         <div class="logo">📊 AI Analyse</div>
         <div class="subtitle">Sikkerhedsrapport Analyse</div>
-        <h1 style="margin: 24px 0 8px 0; font-size: 28px;">${report.customers.name}</h1>
-        <p style="color: #64748b; margin: 0;">Kilde: ${report.file_name}</p>
+        <h1 style="margin: 24px 0 8px 0; font-size: 28px;">${escapeHtml(report.customers.name)}</h1>
+        <p style="color: #64748b; margin: 0;">Kilde: ${escapeHtml(report.file_name)}</p>
       </div>
 
       <div class="info-grid">
@@ -338,13 +347,13 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
           </div>
           <div class="info-item">
             <div class="info-label">RAPPORTFIL</div>
-            <div class="info-value">${report.file_name}</div>
+            <div class="info-value">${escapeHtml(report.file_name)}</div>
           </div>
         </div>
         <div>
           <div class="info-item">
             <div class="info-label">KUNDE</div>
-            <div class="info-value">${report.customers.name}</div>
+            <div class="info-value">${escapeHtml(report.customers.name)}</div>
           </div>
           <div class="info-item">
             <div class="info-label">DRIFTSTYPE</div>
