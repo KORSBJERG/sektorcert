@@ -173,11 +173,11 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
         <div style="flex: 1;">
           <p style="margin: 0 0 4px 0; font-weight: 600; color: #1e293b; font-size: 14px;">
-            ${match.report_recommendation_name}
+            ${escapeHtml(match.report_recommendation_name)}
           </p>
           ${match.recommendations ? `
             <p style="margin: 0; font-size: 12px; color: #3b82f6;">
-              → Matcher #${match.recommendations.number}: ${match.recommendations.title}
+              → Matcher #${match.recommendations.number}: ${escapeHtml(match.recommendations.title)}
             </p>
           ` : `
             <p style="margin: 0; font-size: 12px; color: #94a3b8; font-style: italic;">
