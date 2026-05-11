@@ -366,6 +366,10 @@ const Branding = () => {
           name: companyName,
           description,
           colors,
+          website: website || extracted?.url || null,
+          logoDataUrl: logoDataUrl || null,
+          siteTitle: extracted?.title || null,
+          siteDescription: extracted?.description || null,
         },
       });
       if (error) throw error;
