@@ -16,7 +16,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
    const [googleLoading, setGoogleLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
    const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,26 +65,13 @@ const Auth = () => {
       // Validate input
       const validatedData = authSchema.parse({ email, password });
 
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email: validatedData.email,
-          password: validatedData.password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
-        });
-        if (error) throw error;
-        toast.success("Konto oprettet! Du kan nu logge ind.");
-        setIsSignUp(false);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: validatedData.email,
-          password: validatedData.password,
-        });
-        if (error) throw error;
-        toast.success("Logget ind!");
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
+      if (error) throw error;
+      toast.success("Logget ind!");
+      navigate("/");
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.issues[0].message);
@@ -113,9 +99,7 @@ const Auth = () => {
           <p className="text-muted-foreground">
              {isForgotPassword 
                ? "Nulstil dit password" 
-               : isSignUp 
-                 ? "Opret din konto" 
-                 : "Log ind for at fortsætte"}
+             : "Log ind for at fortsætte"}
           </p>
         </div>
 
@@ -211,15 +195,13 @@ const Auth = () => {
           <div className="space-y-2">
              <div className="flex items-center justify-between">
                <Label htmlFor="password" className="text-foreground">Password</Label>
-               {!isSignUp && (
-                 <button
-                   type="button"
-                   onClick={() => setIsForgotPassword(true)}
-                   className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                 >
-                   Glemt password?
-                 </button>
-               )}
+               <button
+                 type="button"
+                 onClick={() => setIsForgotPassword(true)}
+                 className="text-xs text-muted-foreground hover:text-primary transition-colors"
+               >
+                 Glemt password?
+               </button>
              </div>
             <Input
               id="password"
@@ -238,21 +220,14 @@ const Auth = () => {
             disabled={loading}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
           >
-            {loading ? "Behandler..." : isSignUp ? "Opret konto" : "Log ind"}
+            {loading ? "Behandler..." : "Log ind"}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isSignUp ? "Har du allerede en konto? " : "Har du ikke en konto? "}
-            <span className="text-primary font-medium">
-              {isSignUp ? "Log ind" : "Opret en"}
-            </span>
-          </button>
+          <p className="text-xs text-muted-foreground">
+            Kun inviterede brugere har adgang. Kontakt din administrator for at få oprettet en konto.
+          </p>
         </div>
            </>
          )}
