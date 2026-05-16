@@ -66,15 +66,31 @@ serve(async (req) => {
 
     console.log('Generating PDF for security report:', reportId);
 
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
+          headers: { Authorization: authHeader },
         },
       }
     );
+
+    const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch security report with customer data
     const { data: report, error: reportError } = await supabaseClient
@@ -357,7 +373,7 @@ function generateHTMLReport(report: SecurityReport, matches: ReportMatch[]): str
           </div>
           <div class="info-item">
             <div class="info-label">DRIFTSTYPE</div>
-            <div class="info-value">${report.customers.operation_type}</div>
+            <div class="info-value">${escapeHtml(report.customers.operation_type)}</div>
           </div>
         </div>
       </div>
